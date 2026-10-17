@@ -8,6 +8,7 @@ Termux-Nutzer lesbar, Modus 600).
 from __future__ import annotations
 
 import contextlib
+import errno
 import hashlib
 import http.server
 import json
@@ -322,7 +323,16 @@ def tiktok_login(store: TokenStore, client: httpx.Client, timeout: float = 300) 
         expected_path = target.path or "/"
 
     handler = Handler
-    server = http.server.HTTPServer((target.hostname, target.port), handler)
+    try:
+        server = http.server.HTTPServer((target.hostname, target.port), handler)
+    except OSError as exc:
+        if exc.errno != errno.EADDRINUSE:
+            raise
+        # App und Termux teilen sich localhost: nur ein Login kann gleichzeitig warten
+        raise TerminalError(
+            f"Port {target.port} ist belegt – läuft noch ein anderer TikTok-Login (SMVUT-App "
+            "oder zweites Termux-Fenster)? Den dort abbrechen bzw. höchstens 5 Minuten warten "
+            "und erneut versuchen.") from exc
     server.timeout = 1
     print(f"Browser öffnet sich für den TikTok-Login. Falls nicht, diese Adresse öffnen:\n{url}")
     threading.Thread(target=webbrowser.open, args=(url,), daemon=True).start()

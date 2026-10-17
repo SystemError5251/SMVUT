@@ -162,3 +162,24 @@ def test_env_file_roundtrip(monkeypatch: pytest.MonkeyPatch) -> None:
     config.write_env_file({"S3_BUCKET": ""})
     assert "S3_BUCKET" not in config.read_env_file()
     monkeypatch.delenv("TIKTOK_CLIENT_KEY", raising=False)
+
+
+def test_tiktok_login_port_in_use(store: TokenStore, monkeypatch: pytest.MonkeyPatch) -> None:
+    import socket
+
+    from terminal.auth import tiktok_login
+    from terminal.errors import TerminalError
+
+    busy = socket.socket()
+    busy.bind(("127.0.0.1", 0))
+    busy.listen()
+    port = busy.getsockname()[1]
+    monkeypatch.setenv("TIKTOK_CLIENT_KEY", "ck")
+    monkeypatch.setenv("TIKTOK_CLIENT_SECRET", "cs")
+    monkeypatch.setenv("TIKTOK_REDIRECT_URI", f"http://127.0.0.1:{port}/callback/")
+    try:
+        with httpx.Client() as client, \
+                pytest.raises(TerminalError, match=f"Port {port} ist belegt"):
+            tiktok_login(store, client)
+    finally:
+        busy.close()
