@@ -16,10 +16,11 @@ Das ausführliche Konzept (Limits, Entscheidungen, Risiken, Quellen) steht in [`
 Terminal läuft auch direkt auf dem Handy in [Termux](https://termux.dev). Alles ist reines Python, es muss nichts kompiliert werden.
 
 1. **Termux installieren** – aus [F-Droid](https://f-droid.org/packages/com.termux/) oder von [GitHub](https://github.com/termux/termux-app/releases) (die Play-Store-Version ist veraltet).
-2. **Projekt holen und einrichten** (dauert ca. 1–3 Minuten):
+2. **Projekt holen und einrichten** (dauert ca. 1–3 Minuten). Das Repository ist privat, deshalb erst mit der GitHub-App anmelden. GitHub nimmt beim Klonen kein Passwort an. Die Befehle **einzeln** eingeben, nicht alle auf einmal einfügen:
    ```bash
-   pkg install -y git
-   git clone https://github.com/SystemError5251/SMVUT.git
+   pkg install -y gh git
+   gh auth login        # GitHub.com → HTTPS → Y → Login with a web browser
+   gh repo clone SystemError5251/SMVUT
    cd SMVUT
    bash scripts/termux-setup.sh
    ```
