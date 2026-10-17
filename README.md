@@ -11,12 +11,44 @@ Ein Python-Kommandozeilenprogramm, das ein fertiges Hochformat-Video mit **einem
 Ausschließlich offizielle APIs – keine Browser-Automatisierung, keine nachgebauten App-Schnittstellen.
 Das ausführliche Konzept (Limits, Entscheidungen, Risiken, Quellen) steht in [`docs/konzept.md`](docs/konzept.md).
 
-## Schnellstart
+## Android (Termux)
+
+Terminal läuft auch direkt auf dem Handy in [Termux](https://termux.dev). Alles ist reines Python, es muss nichts kompiliert werden.
+
+1. **Termux installieren** – aus [F-Droid](https://f-droid.org/packages/com.termux/) oder von [GitHub](https://github.com/termux/termux-app/releases) (die Play-Store-Version ist veraltet).
+2. **Projekt holen und einrichten** (dauert ca. 1–3 Minuten):
+   ```bash
+   pkg install -y git
+   git clone https://github.com/SystemError5251/SMVUT.git
+   cd SMVUT
+   bash scripts/termux-setup.sh
+   ```
+   Das Skript installiert `python`, `python-cryptography` (fertig gebaut), `ffmpeg` und Terminal, legt `~/.terminal/.env` an und fragt nach dem Zugriff auf den Handy-Speicher (`termux-setup-storage` – bitte erlauben).
+3. **Zugangsdaten eintragen:** `nano ~/.terminal/.env` (Speichern: Strg+O, Enter; Beenden: Strg+X).
+   Die Google-Datei `client_secret.json` aus den Downloads übernehmen:
+   ```bash
+   cp ~/storage/downloads/client_secret*.json ~/.terminal/client_secret.json
+   ```
+4. **Anmelden:** `terminal auth youtube` bzw. `terminal auth tiktok` öffnen den Login im Android-Browser. Nach „Login erfolgreich“ zurück zu Termux wechseln – das Programm hat den Login dann schon übernommen. Instagram: `terminal auth instagram --token …`.
+5. **Hochladen** – Handy-Videos liegen unter `~/storage/dcim/Camera`, Downloads unter `~/storage/downloads`:
+   ```bash
+   cd ~/storage/dcim/Camera
+   cp ~/SMVUT/examples/clip.yaml mein-video.yaml   # dann mit nano anpassen
+   terminal post mein-video.mp4
+   ```
+
+Tipps für Termux:
+- Bei großen Videos vorher `termux-wake-lock` ausführen (und für Termux in den Android-Einstellungen die Akku-Optimierung abschalten), damit Android den Upload nicht anhält. Danach `termux-wake-unlock`.
+- Android hat keinen Schlüsselbund: Tokens liegen deshalb in `~/.terminal/tokens.json` (nur für Termux lesbar, Modus 600). Diese Datei nie weitergeben.
+- Aktualisieren: `cd ~/SMVUT && git pull` – fertig (die Installation verweist direkt auf den Ordner).
+- `pip install --upgrade pip` in Termux nicht ausführen, das beschädigt Termux’ Python-Paket.
+
+## Schnellstart (Windows, Mac, Linux)
 
 ```bash
 # Voraussetzungen: Python 3.12+, uv, ffmpeg/ffprobe
 uv sync
-cp .env.example .env          # Client-IDs, Secrets, Bucket eintragen (siehe Setup unten)
+cp .env.example .env          # oder ~/.terminal/.env – Client-IDs, Secrets, Bucket eintragen
 
 uv run terminal auth youtube              # Browser-Login bei Google
 uv run terminal auth instagram --token …  # Token aus dem Meta-App-Dashboard
@@ -32,7 +64,7 @@ uv run terminal history                   # letzte Uploads mit Links
 
 ## Metadaten: YAML neben dem Video
 
-Neben `clip-017.mp4` liegt `clip-017.yaml`. Fehlt eine Plattform unter `platforms:`, wird sie übersprungen.
+Neben `clip-017.mp4` liegt `clip-017.yaml`. Fehlt eine Plattform unter `platforms:`, wird sie übersprungen; ein leerer Abschnitt wie `tiktok:` reicht, um sie mit Standardwerten einzuschalten.
 
 ```yaml
 title: "Drei Fakten über Oktopusse"
@@ -73,7 +105,7 @@ Vor dem Instagram-Upload wird automatisch verlustfrei mit `+faststart` remuxt (K
 - Plattformen laufen **nacheinander und unabhängig**: scheitert TikTok, wird YouTube trotzdem fertig. Exit-Code 1, wenn eine Plattform scheitert.
 - **Upload-Historie** in `~/.terminal/history.db` (SHA-256 der Datei je Plattform). Ein zweiter `post` lädt nichts doppelt hoch (außer mit `--force`) und **setzt abgebrochene Läufe fort** – die Instagram-Container-ID wird vor `media_publish` gesichert, ein laufender TikTok-Entwurf wird weiter abgefragt.
 - **Wiederholungen** nur für vorübergehende Fehler (Netzwerk, 429, 5xx) und nur für sichere Schritte: bis 5 Versuche, 2/4/8 … max. 60 s. Tageslimits und endgültige Fehler werden nicht wiederholt.
-- **Tokens** nur im Schlüsselbund (keyring). Instagram wird nach 24 h automatisch verlängert, TikTok eine Stunde vor Ablauf, YouTube über die Google-Bibliothek. Bei HTTP 401 einmal erneuern, danach klare Meldung („Bitte `terminal auth tiktok` ausführen“).
+- **Tokens** im Schlüsselbund (keyring); auf Termux in `~/.terminal/tokens.json` mit Modus 600 (Ordner `~/.terminal` ist nur für dich lesbar). Instagram wird nach 24 h automatisch verlängert, TikTok eine Stunde vor Ablauf, YouTube über die Google-Bibliothek. Bei HTTP 401 einmal erneuern, danach klare Meldung („Bitte `terminal auth tiktok` ausführen“).
 - **Log** `~/.terminal/terminal.log` enthält nur eigene Meldungen – keine Header, keine Request-Inhalte; Tokens werden zusätzlich herausgefiltert.
 
 ## Setup (einmalig in den Entwicklerportalen)
@@ -103,7 +135,7 @@ Vor dem Instagram-Upload wird automatisch verlustfrei mit `+faststart` remuxt (K
 3. Scopes `user.info.basic` und `video.upload`; Sandbox mit deinem Konto als Testnutzer.
 4. Nur falls Entwürfe aus der Sandbox nicht öffentlich gehen: App Review beantragen.
 
-**Linux ohne Desktop:** keyring braucht einen Schlüsselbund – z. B. `uv pip install keyrings.alt` oder gnome-keyring/KWallet.
+**Linux ohne Desktop:** keyring braucht einen Schlüsselbund (gnome-keyring/KWallet). Alternativ `TERMINAL_TOKEN_STORE=file` in die `.env` schreiben – dann wie auf Termux in `~/.terminal/tokens.json`.
 
 ## Testvideo
 

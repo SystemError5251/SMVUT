@@ -1,6 +1,8 @@
 """Anmeldung und Token-Verwaltung für YouTube, Instagram und TikTok.
 
-Tokens liegen ausschließlich im Schlüsselbund des Betriebssystems (keyring).
+Tokens liegen im Schlüsselbund des Betriebssystems (keyring). Android/Termux hat
+keinen Schlüsselbund: Dort liegen sie in ~/.terminal/tokens.json (nur für den
+Termux-Nutzer lesbar, Modus 600).
 """
 
 from __future__ import annotations
@@ -9,6 +11,7 @@ import contextlib
 import hashlib
 import http.server
 import json
+import os
 import secrets
 import threading
 import time
@@ -19,8 +22,6 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import httpx
-import keyring
-import keyring.errors
 
 from terminal import config
 from terminal.errors import AuthRequired, ConfigError, TerminalError
@@ -28,29 +29,83 @@ from terminal.errors import AuthRequired, ConfigError, TerminalError
 KEYRING_SERVICE = config.APP_NAME
 
 
-# --- Schlüsselbund ---------------------------------------------------------
+# --- Token-Speicher --------------------------------------------------------
 class TokenStore:
+    """Schlüsselbund (keyring) oder, auf Termux, eine Datei mit Modus 600."""
+
+    def __init__(self, backend: str | None = None) -> None:
+        self.backend = backend or config.token_backend()
+
     def load(self, platform: str) -> dict[str, Any] | None:
+        if self.backend == "file":
+            data = self._read_file().get(platform)
+            return data if isinstance(data, dict) else None
+        keyring, errors = _keyring()
         try:
             raw = keyring.get_password(KEYRING_SERVICE, platform)
-        except keyring.errors.KeyringError as exc:
+        except errors.KeyringError as exc:
             raise ConfigError(_keyring_hint(exc)) from exc
         return json.loads(raw) if raw else None
 
     def save(self, platform: str, data: dict[str, Any]) -> None:
+        if self.backend == "file":
+            tokens = self._read_file()
+            tokens[platform] = data
+            self._write_file(tokens)
+            return
+        keyring, errors = _keyring()
         try:
             keyring.set_password(KEYRING_SERVICE, platform, json.dumps(data))
-        except keyring.errors.KeyringError as exc:
+        except errors.KeyringError as exc:
             raise ConfigError(_keyring_hint(exc)) from exc
 
     def delete(self, platform: str) -> None:
-        with contextlib.suppress(keyring.errors.PasswordDeleteError):
+        if self.backend == "file":
+            tokens = self._read_file()
+            if tokens.pop(platform, None) is not None:
+                self._write_file(tokens)
+            return
+        keyring, errors = _keyring()
+        with contextlib.suppress(errors.PasswordDeleteError):
             keyring.delete_password(KEYRING_SERVICE, platform)
+
+    @staticmethod
+    def _read_file() -> dict[str, Any]:
+        path = config.token_file()
+        if not path.exists():
+            return {}
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except ValueError as exc:
+            raise ConfigError(f"{path} ist beschädigt – löschen und neu anmelden") from exc
+        return data if isinstance(data, dict) else {}
+
+    @staticmethod
+    def _write_file(tokens: dict[str, Any]) -> None:
+        path = config.token_file()
+        tmp = path.with_suffix(".tmp")
+        # Datei von Anfang an nur für den eigenen Nutzer lesbar anlegen
+        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(tokens, f)
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, path)
+
+
+def _keyring() -> tuple[Any, Any]:
+    try:
+        import keyring
+        import keyring.errors
+    except ImportError as exc:
+        raise ConfigError("keyring ist nicht installiert – `pip install keyring` oder "
+                          "TERMINAL_TOKEN_STORE=file in die .env schreiben") from exc
+    return keyring, keyring.errors
 
 
 def _keyring_hint(exc: Exception) -> str:
     return (f"Kein Schlüsselbund verfügbar ({type(exc).__name__}). Unter Linux ohne Desktop "
-            "z. B. `pip install keyrings.alt` oder gnome-keyring/KWallet einrichten.")
+            "gnome-keyring/KWallet einrichten oder TERMINAL_TOKEN_STORE=file in die .env "
+            "schreiben (Tokens dann in ~/.terminal/tokens.json, nur für dich lesbar).")
 
 
 def _now() -> float:
@@ -86,7 +141,7 @@ def _json(response: httpx.Response) -> dict[str, Any]:
 def youtube_login(store: TokenStore) -> str:
     from google_auth_oauthlib.flow import InstalledAppFlow
 
-    path = config.require_env("YOUTUBE_CLIENT_SECRETS")
+    path = config.find_file(config.require_env("YOUTUBE_CLIENT_SECRETS"))
     try:
         flow = InstalledAppFlow.from_client_secrets_file(path, config.YOUTUBE_SCOPES)
     except FileNotFoundError as exc:

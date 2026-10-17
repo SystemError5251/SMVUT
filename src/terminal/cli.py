@@ -47,6 +47,7 @@ log = logging.getLogger(config.APP_NAME)
 
 def _setup() -> None:
     config.load_env()
+    config.setup_browser()
     if not log.handlers:
         # Nur eigene Fehlermeldungen ins Log: keine Header, keine Request-Inhalte
         handler = logging.FileHandler(config.log_path(), encoding="utf-8")

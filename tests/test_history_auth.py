@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import stat
 import time
 from pathlib import Path
 
@@ -77,3 +78,68 @@ def test_redact() -> None:
     out = redact(text)
     assert "SECRET123" not in out and "abc.def" not in out and "deadbeef" not in out
     assert "fields=x" in out
+
+
+def test_file_store_is_private(store: TokenStore) -> None:
+    assert store.backend == "file"
+    store.save("tiktok", {"access_token": "a"})
+    store.save("youtube", {"token": "b"})
+    path = config.token_file()
+    assert stat.S_IMODE(path.stat().st_mode) == 0o600
+    assert TokenStore().load("tiktok") == {"access_token": "a"}
+    store.delete("tiktok")
+    assert store.load("tiktok") is None and store.load("youtube") == {"token": "b"}
+
+
+def test_keyring_backend(monkeypatch: pytest.MonkeyPatch) -> None:
+    keyring = pytest.importorskip("keyring")
+    from keyring.backend import KeyringBackend
+
+    class Memory(KeyringBackend):
+        priority = 1  # type: ignore[assignment]
+        data: dict[tuple[str, str], str] = {}
+
+        def get_password(self, service: str, username: str) -> str | None:
+            return self.data.get((service, username))
+
+        def set_password(self, service: str, username: str, password: str) -> None:
+            self.data[(service, username)] = password
+
+        def delete_password(self, service: str, username: str) -> None:
+            self.data.pop((service, username), None)
+
+    keyring.set_keyring(Memory())
+    store = TokenStore("keyring")
+    store.save("instagram", {"access_token": "x"})
+    assert store.load("instagram") == {"access_token": "x"}
+    assert not config.token_file().exists()
+
+
+@pytest.mark.parametrize(("env", "backend"), [
+    ({}, "keyring"),
+    ({"TERMUX_VERSION": "0.119"}, "file"),
+    ({"PREFIX": "/data/data/com.termux/files/usr"}, "file"),
+    ({"PREFIX": "/data/data/com.termux/files/usr", "TERMINAL_TOKEN_STORE": "keyring"},
+     "keyring"),
+])
+def test_token_backend_detection(monkeypatch: pytest.MonkeyPatch, env: dict[str, str],
+                                 backend: str) -> None:
+    for name in ("TERMUX_VERSION", "PREFIX", "TERMINAL_TOKEN_STORE"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setattr(config.sys, "platform", "linux")
+    for name, value in env.items():
+        monkeypatch.setenv(name, value)
+    assert config.token_backend() == backend
+
+
+def test_termux_browser(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("BROWSER", raising=False)
+    monkeypatch.setenv("TERMUX_VERSION", "0.119")
+    monkeypatch.setattr(config.shutil, "which", lambda name: f"/usr/bin/{name}")
+    config.setup_browser()
+    assert config.os.environ["BROWSER"] == "termux-open-url"
+    monkeypatch.delenv("BROWSER")
+
+
+def test_home_is_private() -> None:
+    assert stat.S_IMODE(config.home().stat().st_mode) == 0o700

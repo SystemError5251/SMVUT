@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+import shutil
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -68,7 +70,11 @@ YOUTUBE_TAGS_MAX = 500
 # --- Pfade -----------------------------------------------------------------
 def home() -> Path:
     path = Path(os.environ.get("TERMINAL_HOME", Path.home() / f".{APP_NAME}"))
-    path.mkdir(parents=True, exist_ok=True)
+    if not path.is_dir():
+        path.mkdir(parents=True, exist_ok=True)
+        # nur für den eigenen Nutzer: Tokens (Termux), Historie, Log, Cache
+        # (Termux legt Dateien sonst mit umask 000 an)
+        path.chmod(0o700)
     return path
 
 
@@ -86,6 +92,30 @@ def log_path() -> Path:
     return home() / f"{APP_NAME}.log"
 
 
+def token_file() -> Path:
+    return home() / "tokens.json"
+
+
+# --- Android / Termux ------------------------------------------------------
+def is_termux() -> bool:
+    return (sys.platform == "android" or "TERMUX_VERSION" in os.environ
+            or "com.termux" in os.environ.get("PREFIX", ""))
+
+
+def token_backend() -> str:
+    """keyring auf Desktop-Systemen, Datei auf Termux (Android hat keinen Schlüsselbund)."""
+    choice = os.environ.get("TERMINAL_TOKEN_STORE", "").strip().lower()
+    if choice in ("keyring", "file"):
+        return choice
+    return "file" if is_termux() else "keyring"
+
+
+def setup_browser() -> None:
+    """Auf Termux öffnet termux-open-url den Login im Android-Browser."""
+    if is_termux() and "BROWSER" not in os.environ and shutil.which("termux-open-url"):
+        os.environ["BROWSER"] = "termux-open-url"
+
+
 def load_env() -> None:
     """Liest .env aus dem aktuellen Ordner und aus ~/.terminal/.env."""
     load_dotenv(Path.cwd() / ".env")
@@ -95,6 +125,14 @@ def load_env() -> None:
 def env(name: str, default: str | None = None) -> str | None:
     value = os.environ.get(name, default)
     return value or default
+
+
+def find_file(value: str) -> Path:
+    """Relative Pfade aus der .env: erst im aktuellen Ordner, dann in ~/.terminal/."""
+    path = Path(value).expanduser()
+    if path.is_absolute() or path.exists():
+        return path
+    return home() / path
 
 
 def require_env(name: str) -> str:

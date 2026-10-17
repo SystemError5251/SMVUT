@@ -5,9 +5,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-import keyring
 import pytest
-from keyring.backend import KeyringBackend
 
 from terminal.auth import TokenStore
 
@@ -25,29 +23,13 @@ platforms:
 """
 
 
-class MemoryKeyring(KeyringBackend):
-    priority = 1  # type: ignore[assignment]
-
-    def __init__(self) -> None:
-        self.data: dict[tuple[str, str], str] = {}
-
-    def get_password(self, service: str, username: str) -> str | None:
-        return self.data.get((service, username))
-
-    def set_password(self, service: str, username: str, password: str) -> None:
-        self.data[(service, username)] = password
-
-    def delete_password(self, service: str, username: str) -> None:
-        self.data.pop((service, username), None)
-
-
 @pytest.fixture(autouse=True)
 def isolated(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("TERMINAL_HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("TERMINAL_TOKEN_STORE", "file")  # läuft auch auf Termux ohne keyring
     for name in ("S3_BUCKET", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY", "S3_ENDPOINT_URL",
                  "TIKTOK_CLIENT_KEY", "TIKTOK_CLIENT_SECRET", "INSTAGRAM_APP_SECRET"):
         monkeypatch.delenv(name, raising=False)
-    keyring.set_keyring(MemoryKeyring())
 
 
 @pytest.fixture

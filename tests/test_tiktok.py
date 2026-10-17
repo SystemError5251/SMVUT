@@ -12,7 +12,7 @@ from terminal import config
 from terminal.auth import TokenStore
 from terminal.errors import QuotaExceeded, UploadError
 from terminal.history import DRAFT_SENT, Entry
-from terminal.meta import PostMeta, TikTokOptions
+from terminal.meta import Platforms, PostMeta, TikTokOptions
 from terminal.platforms.tiktok import TikTokUploader, chunk_plan, chunk_ranges
 from tests.conftest import fake_ctx
 
@@ -57,7 +57,7 @@ def logged_in(store: TokenStore) -> TokenStore:
 
 def meta() -> PostMeta:
     return PostMeta(title="T", description="Hallo", hashtags=["x"], ai_generated=True,
-                    platforms={"tiktok": TikTokOptions()})  # type: ignore[arg-type]
+                    platforms=Platforms(tiktok=TikTokOptions()))
 
 
 @respx.mock

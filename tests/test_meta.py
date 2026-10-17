@@ -72,3 +72,35 @@ def test_publish_at_needs_timezone(tmp_path: Path) -> None:
 def test_missing_yaml(tmp_path: Path) -> None:
     with pytest.raises(MetaError, match="clip.yaml fehlt"):
         meta_path_for(tmp_path / "clip.mp4")
+
+
+def test_empty_section_enables_platform(tmp_path: Path) -> None:
+    meta = load_meta(write(tmp_path, "title: T\nplatforms:\n  tiktok:\n  youtube:\n"))
+    assert meta.targets == ["youtube", "tiktok"]
+    assert meta.platforms.youtube is not None
+    assert meta.platforms.youtube.privacy == "public"
+
+
+def test_type_errors_and_missing_title(tmp_path: Path) -> None:
+    path = write(tmp_path, """\
+description: x
+hashtags: nope
+ai_generated: vielleicht
+platforms:
+  youtube:
+    privacy: geheim
+    category_id: 27
+""")
+    with pytest.raises(MetaError) as exc:
+        load_meta(path)
+    text = str(exc.value)
+    assert "title: Pflichtfeld fehlt" in text
+    assert "clip.yaml:2  hashtags: Liste erwartet" in text
+    assert "clip.yaml:3  ai_generated: true oder false erwartet" in text
+    assert "clip.yaml:6  platforms.youtube.privacy: erlaubt: public, unlisted, private" in text
+
+
+def test_category_number_becomes_text(tmp_path: Path) -> None:
+    meta = load_meta(write(tmp_path, "title: T\nplatforms:\n  youtube:\n    category_id: 27\n"))
+    assert meta.platforms.youtube is not None
+    assert meta.platforms.youtube.category_id == "27"

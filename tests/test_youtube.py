@@ -11,14 +11,14 @@ from googleapiclient.errors import HttpError
 
 from terminal.auth import TokenStore
 from terminal.errors import QuotaExceeded
-from terminal.meta import PostMeta, YouTubeOptions
+from terminal.meta import Platforms, PostMeta, YouTubeOptions
 from terminal.platforms.youtube import YouTubeUploader, build_body
 from tests.conftest import fake_ctx
 
 
 def meta(**yt: Any) -> PostMeta:
     return PostMeta(title="Titel", description="Text", hashtags=["a", "b"], ai_generated=True,
-                    platforms={"youtube": YouTubeOptions(**yt)})  # type: ignore[arg-type]
+                    platforms=Platforms(youtube=YouTubeOptions(**yt)))
 
 
 def test_body() -> None:

@@ -1,82 +1,64 @@
-"""PostMeta: die YAML-Datei neben jedem Video."""
+"""PostMeta: die YAML-Datei neben jedem Video.
+
+Bewusst ohne pydantic: pydantic-core hat keine Android-Wheels und müsste in Termux
+mit Rust kompiliert werden. Die Prüfung hier ist reines Python.
+"""
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from dataclasses import MISSING, dataclass, field, fields
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 import yaml
-from pydantic import BaseModel, ConfigDict, ValidationError, field_validator, model_validator
 
 from terminal.errors import MetaError
 
+PRIVACY = ("public", "unlisted", "private")
+Loc = tuple[int | str, ...]
 
-class StrictModel(BaseModel):
-    model_config = ConfigDict(extra="forbid")
 
-
-class InstagramOptions(StrictModel):
+@dataclass
+class InstagramOptions:
     share_to_feed: bool = True
     caption: str | None = None  # None = gemeinsamer Text aus description + hashtags
 
 
-class YouTubeOptions(StrictModel):
-    privacy: Literal["public", "unlisted", "private"] = "public"
+@dataclass
+class YouTubeOptions:
+    privacy: str = "public"  # public | unlisted | private
     category_id: str = "22"  # 22 = People & Blogs, 27 = Bildung
     made_for_kids: bool = False
     publish_at: datetime | None = None
     description: str | None = None  # None = gemeinsamer Text
 
-    @field_validator("category_id", mode="before")
-    @classmethod
-    def _category_as_str(cls, value: Any) -> Any:
-        return str(value) if isinstance(value, int) else value
-
-    @field_validator("publish_at")
-    @classmethod
-    def _needs_timezone(cls, value: datetime | None) -> datetime | None:
-        if value is not None and value.tzinfo is None:
-            raise ValueError("publish_at braucht eine Zeitzone, z. B. 2026-10-20T18:00:00+02:00")
-        return value
-
-    @model_validator(mode="after")
-    def _scheduled_is_private(self) -> YouTubeOptions:
+    def __post_init__(self) -> None:
         # YouTube verlangt privacyStatus=private, solange publishAt gesetzt ist
         if self.publish_at is not None:
             self.privacy = "private"
-        return self
 
 
-class TikTokOptions(StrictModel):
+@dataclass
+class TikTokOptions:
     caption: str | None = None  # wird nur zum Kopieren ausgegeben (Entwurf)
 
 
-class Platforms(StrictModel):
+@dataclass
+class Platforms:
     instagram: InstagramOptions | None = None
     youtube: YouTubeOptions | None = None
     tiktok: TikTokOptions | None = None
 
 
-class PostMeta(StrictModel):
+@dataclass
+class PostMeta:
     title: str
     description: str = ""
-    hashtags: list[str] = []
+    hashtags: list[str] = field(default_factory=list)
     ai_generated: bool = False
-    platforms: Platforms = Platforms()
-
-    @field_validator("hashtags")
-    @classmethod
-    def _strip_hash(cls, tags: list[str]) -> list[str]:
-        cleaned = [t.strip().lstrip("#").strip() for t in tags]
-        return [t for t in cleaned if t]
-
-    @field_validator("title")
-    @classmethod
-    def _title_not_empty(cls, value: str) -> str:
-        if not value.strip():
-            raise ValueError("title darf nicht leer sein")
-        return value.strip()
+    platforms: Platforms = field(default_factory=Platforms)
 
     @property
     def targets(self) -> list[str]:
@@ -97,6 +79,131 @@ class PostMeta(StrictModel):
         return override if override is not None else self.shared_text()
 
 
+# --- Prüfung ---------------------------------------------------------------
+class _Errors:
+    def __init__(self) -> None:
+        self.items: list[tuple[Loc, str]] = []
+
+    def add(self, loc: Loc, msg: str) -> None:
+        self.items.append((loc, msg))
+
+
+Check = Callable[[Any, Loc, _Errors], Any]
+
+
+def _str(value: Any, loc: Loc, errors: _Errors) -> Any:
+    if isinstance(value, bool) or not isinstance(value, str | int | float):
+        errors.add(loc, "Text erwartet")
+        return None
+    return str(value)
+
+
+def _opt_str(value: Any, loc: Loc, errors: _Errors) -> Any:
+    return None if value is None else _str(value, loc, errors)
+
+
+def _bool(value: Any, loc: Loc, errors: _Errors) -> Any:
+    if not isinstance(value, bool):
+        errors.add(loc, "true oder false erwartet")
+    return value
+
+
+def _str_list(value: Any, loc: Loc, errors: _Errors) -> Any:
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        errors.add(loc, "Liste erwartet, z. B. [eins, zwei]")
+        return []
+    items = [_str(v, (*loc, i), errors) for i, v in enumerate(value)]
+    cleaned = [str(t).strip().lstrip("#").strip() for t in items if t is not None]
+    return [t for t in cleaned if t]
+
+
+def _privacy(value: Any, loc: Loc, errors: _Errors) -> Any:
+    if value not in PRIVACY:
+        errors.add(loc, f"erlaubt: {', '.join(PRIVACY)}")
+    return value
+
+
+def _opt_datetime(value: Any, loc: Loc, errors: _Errors) -> Any:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        try:
+            value = datetime.fromisoformat(value)
+        except ValueError:
+            errors.add(loc, "Datum/Zeit erwartet, z. B. 2026-10-20T18:00:00+02:00")
+            return None
+    if not isinstance(value, datetime):  # ein reines Datum reicht nicht
+        errors.add(loc, "Datum mit Uhrzeit erwartet, z. B. 2026-10-20T18:00:00+02:00")
+        return None
+    if value.tzinfo is None:
+        errors.add(loc, "publish_at braucht eine Zeitzone, z. B. 2026-10-20T18:00:00+02:00")
+        return None
+    return value
+
+
+def _section(cls: type, spec: dict[str, Check]) -> Check:
+    def check(value: Any, loc: Loc, errors: _Errors) -> Any:
+        if value is None:  # `tiktok:` ohne Inhalt = Plattform mit Standardwerten
+            return cls()
+        if not isinstance(value, dict):
+            errors.add(loc, "Abschnitt mit key: value erwartet")
+            return None
+        return _build(cls, spec, value, loc, errors)
+    return check
+
+
+def _build(cls: type, spec: dict[str, Check], data: dict[str, Any], loc: Loc,
+           errors: _Errors) -> Any:
+    kwargs: dict[str, Any] = {}
+    for key, value in data.items():
+        if key not in spec:
+            errors.add((*loc, key), "unbekanntes Feld (Tippfehler?)")
+            continue
+        checked = spec[key](value, (*loc, key), errors)
+        if checked is not None:
+            kwargs[key] = checked
+    for f in fields(cls):
+        required = f.default is MISSING and f.default_factory is MISSING
+        if required and f.name not in data:
+            errors.add((*loc, f.name), "Pflichtfeld fehlt")
+    if errors.items:
+        return None
+    return cls(**kwargs)
+
+
+INSTAGRAM_SPEC: dict[str, Check] = {"share_to_feed": _bool, "caption": _opt_str}
+YOUTUBE_SPEC: dict[str, Check] = {"privacy": _privacy, "category_id": _str,
+                                  "made_for_kids": _bool, "publish_at": _opt_datetime,
+                                  "description": _opt_str}
+TIKTOK_SPEC: dict[str, Check] = {"caption": _opt_str}
+PLATFORMS_SPEC: dict[str, Check] = {
+    "instagram": _section(InstagramOptions, INSTAGRAM_SPEC),
+    "youtube": _section(YouTubeOptions, YOUTUBE_SPEC),
+    "tiktok": _section(TikTokOptions, TIKTOK_SPEC),
+}
+
+
+def _title(value: Any, loc: Loc, errors: _Errors) -> Any:
+    text = _str(value, loc, errors)
+    if text is not None and not text.strip():
+        errors.add(loc, "title darf nicht leer sein")
+        return None
+    return text.strip() if text else text
+
+
+def _platforms(value: Any, loc: Loc, errors: _Errors) -> Any:
+    if value is None:
+        return Platforms()
+    return _section(Platforms, PLATFORMS_SPEC)(value, loc, errors)
+
+
+META_SPEC: dict[str, Check] = {"title": _title, "description": _str, "hashtags": _str_list,
+                               "ai_generated": _bool, "platforms": _platforms}
+
+
+# --- Laden -----------------------------------------------------------------
 def meta_path_for(video: Path) -> Path:
     for suffix in (".yaml", ".yml"):
         candidate = video.with_suffix(suffix)
@@ -106,17 +213,16 @@ def meta_path_for(video: Path) -> Path:
                     f"neben {video.name}")
 
 
-def _line_of(node: yaml.Node | None, loc: tuple[int | str, ...]) -> int | None:
+def _line_of(node: yaml.Node | None, loc: Loc) -> int | None:
     """Sucht die Zeile eines Feldes im YAML-Baum, damit Fehler eine Zeilenangabe bekommen."""
     line = node.start_mark.line + 1 if node else None
     for key in loc:
         if isinstance(node, yaml.MappingNode):
-            match = next((v for k, v in node.value if k.value == key), None)
-            key_node = next((k for k, _ in node.value if k.value == key), None)
-            if match is None:
+            pair = next(((k, v) for k, v in node.value if k.value == key), None)
+            if pair is None:
                 break
-            line = (key_node or match).start_mark.line + 1
-            node = match
+            line = pair[0].start_mark.line + 1
+            node = pair[1]
         elif isinstance(node, yaml.SequenceNode) and isinstance(key, int) and key < len(
                 node.value):
             node = node.value[key]
@@ -124,6 +230,12 @@ def _line_of(node: yaml.Node | None, loc: tuple[int | str, ...]) -> int | None:
         else:
             break
     return line
+
+
+def parse_meta(data: dict[str, Any]) -> tuple[PostMeta | None, list[tuple[Loc, str]]]:
+    errors = _Errors()
+    meta = _build(PostMeta, META_SPEC, data, (), errors)
+    return meta, errors.items
 
 
 def load_meta(path: Path) -> PostMeta:
@@ -135,15 +247,11 @@ def load_meta(path: Path) -> PostMeta:
         raise MetaError(f"{path.name}: kein gültiges YAML – {exc}") from exc
     if not isinstance(data, dict):
         raise MetaError(f"{path.name}: erwartet wird eine Zuordnung (key: value)")
-    try:
-        return PostMeta.model_validate(data)
-    except ValidationError as exc:
+    meta, errors = parse_meta(data)
+    if meta is None or errors:
         lines = []
-        for err in exc.errors():
-            loc = tuple(err["loc"])
-            line = _line_of(tree, loc)
+        for loc, msg in errors:
             where = ".".join(str(p) for p in loc) or "(Datei)"
-            msg = "unbekanntes Feld (Tippfehler?)" if err["type"] == "extra_forbidden" \
-                else err["msg"]
-            lines.append(f"  {path.name}:{line or '?'}  {where}: {msg}")
-        raise MetaError("Metadaten ungültig:\n" + "\n".join(lines)) from exc
+            lines.append(f"  {path.name}:{_line_of(tree, loc) or '?'}  {where}: {msg}")
+        raise MetaError("Metadaten ungültig:\n" + "\n".join(lines))
+    return meta

@@ -12,7 +12,7 @@ from terminal import config
 from terminal.auth import TokenStore
 from terminal.errors import AuthRequired, QuotaExceeded, UploadError, UploadTimeout
 from terminal.history import CONTAINER_CREATED, PUBLISHED, Entry
-from terminal.meta import InstagramOptions, PostMeta
+from terminal.meta import InstagramOptions, Platforms, PostMeta
 from terminal.platforms.instagram import InstagramUploader
 from tests.conftest import fake_ctx
 
@@ -52,7 +52,7 @@ def logged_in(store: TokenStore) -> TokenStore:
 
 def meta() -> PostMeta:
     return PostMeta(title="T", description="Hallo", hashtags=["x"],
-                    platforms={"instagram": InstagramOptions()})  # type: ignore[arg-type]
+                    platforms=Platforms(instagram=InstagramOptions()))
 
 
 def uploader(store: TokenStore, hosting: FakeHosting) -> InstagramUploader:
