@@ -2,7 +2,7 @@
 # Baut die Android-App (APK) mit BeeWare Briefcase.
 #
 #   Voraussetzung: Python 3.13 und  pip install briefcase==0.4.6
-#   bash scripts/build-apk.sh                 → dist-apk/Terminal-<version>.apk
+#   bash scripts/build-apk.sh                 → dist-apk/SMVUT-<version>.apk
 #   ABI=arm64-v8a bash scripts/build-apk.sh   → nur für Handys (halb so groß)
 #
 # Beim allerersten Mal lädt Briefcase Java 17 und das Android SDK. Fragt es dabei
@@ -39,6 +39,6 @@ done
 
 VERSION=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['tool']['briefcase']['version'])")
 mkdir -p dist-apk
-TARGET="dist-apk/Terminal-$VERSION${ABI:+-$ABI}.apk"
+TARGET="dist-apk/SMVUT-$VERSION${ABI:+-$ABI}.apk"
 cp "$GRADLE/app/build/outputs/apk/debug/app-debug.apk" "$TARGET"
 echo "APK: $TARGET ($(du -h "$TARGET" | cut -f1))"

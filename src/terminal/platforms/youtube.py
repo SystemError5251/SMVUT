@@ -89,7 +89,7 @@ class YouTubeUploader:
 
     def check(self, video: Path, meta: PostMeta, info: VideoInfo) -> list[Issue]:
         if not self.store.load("youtube"):
-            return [Issue("error", self.name, "Nicht angemeldet – `terminal auth youtube`")]
+            return [Issue("error", self.name, "Nicht angemeldet – `smvut auth youtube`")]
         return []
 
     @transient

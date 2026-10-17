@@ -38,7 +38,7 @@ class AuthRequired(TerminalError):
     """Token fehlt, ist abgelaufen oder widerrufen."""
 
     def __init__(self, platform: str, detail: str = "") -> None:
-        hint = f"Bitte `terminal auth {platform}` ausführen"
+        hint = f"Bitte `smvut auth {platform}` ausführen"
         super().__init__(f"{detail} – {hint}" if detail else hint)
         self.platform = platform
 

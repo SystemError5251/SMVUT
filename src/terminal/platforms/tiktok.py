@@ -1,7 +1,7 @@
 """TikTok nur als Entwurf: Video landet im Posteingang, veröffentlicht wird in der App.
 
 Die Entwurfs-API (inbox/video/init) überträgt nur das Video, keinen Text. Caption und
-Hashtags gibt Terminal deshalb am Ende zum Kopieren aus.
+Hashtags gibt SMVUT deshalb am Ende zum Kopieren aus.
 """
 
 from __future__ import annotations
@@ -70,7 +70,7 @@ class TikTokUploader:
 
     def check(self, video: Path, meta: PostMeta, info: VideoInfo) -> list[Issue]:
         if not self.store.load("tiktok"):
-            return [Issue("error", self.name, "Nicht angemeldet – `terminal auth tiktok`")]
+            return [Issue("error", self.name, "Nicht angemeldet – `smvut auth tiktok`")]
         return []
 
     # --- API ---------------------------------------------------------------
@@ -100,7 +100,7 @@ class TikTokUploader:
         raise UploadError(message)
 
     def api_post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
-        """Bei HTTP 401 einmal erneuern, danach mit Hinweis auf `terminal auth` abbrechen."""
+        """Bei HTTP 401 einmal erneuern, danach mit Hinweis auf `smvut auth` abbrechen."""
         if self._token is None:
             self._token = tiktok_token(self.store, self.client)
         try:
@@ -150,7 +150,7 @@ class TikTokUploader:
         state = self._poll(publish_id)
         status = state.get("status")
         if status in PENDING_STATES:
-            raise UploadTimeout("TikTok verarbeitet noch – `terminal post` später erneut "
+            raise UploadTimeout("TikTok verarbeitet noch – `smvut post` später erneut "
                                 "ausführen, dann wird fortgesetzt")
         if status not in INBOX_STATES:
             raise UploadError(f"TikTok {status}: {state.get('fail_reason', 'unbekannt')}")

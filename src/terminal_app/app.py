@@ -1,4 +1,4 @@
-"""Terminal als Android-App: Video wählen, Texte eintragen, hochladen."""
+"""SMVUT (Social Media Upload Tool) als Android-App: Video wählen, Texte eintragen, hochladen."""
 
 from __future__ import annotations
 
@@ -411,4 +411,4 @@ class TerminalApp(toga.App):
 
 
 def main() -> TerminalApp:
-    return TerminalApp("Terminal", "io.github.systemerror5251.terminal_app")
+    return TerminalApp("SMVUT", "io.github.systemerror5251.terminal_app")

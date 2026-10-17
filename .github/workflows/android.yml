@@ -66,7 +66,7 @@ jobs:
           target: google_apis
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
-          script: bash scripts/android-smoke-test.sh dist-apk/Terminal-0.1.0.apk
+          script: bash scripts/android-smoke-test.sh dist-apk/SMVUT-0.1.0.apk
 
       - name: Testergebnisse sichern
         if: always()
@@ -85,5 +85,5 @@ jobs:
           gh release create android-latest dist-apk/*.apk \
             test-output/screenshot-hochladen.png test-output/screenshot-konten.png \
             --prerelease --target "$GITHUB_SHA" \
-            --title "Terminal für Android (neuester Build)" \
-            --notes "Gebaut aus ${GITHUB_SHA::7} und im Android-Emulator getestet. Auf dem Handy: **Terminal-0.1.0.apk** antippen → herunterladen → installieren (Installation aus dieser Quelle einmal erlauben)."
+            --title "SMVUT – Social Media Upload Tool für Android (neuester Build)" \
+            --notes "Gebaut aus ${GITHUB_SHA::7} und im Android-Emulator getestet. Auf dem Handy: **SMVUT-0.1.0.apk** antippen → herunterladen → installieren (Installation aus dieser Quelle einmal erlauben)."

@@ -1,7 +1,7 @@
 > Textfassung des Konzepts aus dem Projekt „WhatIf“. Original mit Tabellen, Diagramm und Quellen-Links:
 > https://claude.ai/artifact/41MP3qxE1BfHx2vTpa9Kax
 >
-> Hinweis: Im Konzept heißt das Tool noch `shortpost`; umgesetzt ist es als **Terminal** (Befehl `terminal`, Paket `src/terminal/`, Daten in `~/.terminal/`).
+> Hinweis: Im Konzept heißt das Tool noch `shortpost`; umgesetzt ist es als **SMVUT – Social Media Upload Tool** (Befehl `smvut`, Paket `src/terminal/`, Daten in `~/.terminal/`).
 
 # Konzept: Video-Uploader für Reels, Shorts & TikTok
  · 

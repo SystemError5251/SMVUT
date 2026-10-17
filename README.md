@@ -1,4 +1,6 @@
-# Terminal
+# SMVUT – Social Media Upload Tool
+
+> Kommandozeile: `smvut …` (der frühere Befehl `terminal …` funktioniert weiter).
 
 Lädt ein fertiges Hochformat-Video mit **einem Befehl** (oder einem Tipp in der Android-App) hoch:
 
@@ -17,7 +19,7 @@ Die einfachste Variante fürs Handy – ohne Termux, mit Oberfläche.
 
 1. **Herunterladen:** Im Handy-Browser das Release
    [`android-latest`](https://github.com/SystemError5251/SMVUT/releases/tag/android-latest) öffnen
-   und **Terminal-0.1.0.apk** antippen. Jede neue Version entsteht automatisch (GitHub Actions baut sie
+   und **SMVUT-0.1.0.apk** antippen. Jede neue Version entsteht automatisch (GitHub Actions baut sie
    und testet sie vorher in einem Android-Emulator).
 2. **Installieren:** Die heruntergeladene Datei antippen. Android fragt einmal, ob der Browser/die
    GitHub-App Apps installieren darf → erlauben. Play Protect warnt eventuell vor einer
@@ -45,7 +47,7 @@ APK selbst bauen: `pip install briefcase==0.4.6` (Python 3.13), dann `bash scrip
 
 ## Android (Termux)
 
-Terminal läuft auch direkt auf dem Handy in [Termux](https://termux.dev). Alles ist reines Python, es muss nichts kompiliert werden.
+SMVUT läuft auch direkt auf dem Handy in [Termux](https://termux.dev). Alles ist reines Python, es muss nichts kompiliert werden.
 
 1. **Termux installieren** – aus [F-Droid](https://f-droid.org/packages/com.termux/) oder von [GitHub](https://github.com/termux/termux-app/releases) (die Play-Store-Version ist veraltet).
 2. **Projekt holen und einrichten** (dauert ca. 1–3 Minuten). Das Repository ist privat, deshalb erst mit der GitHub-App anmelden. GitHub nimmt beim Klonen kein Passwort an. Die Befehle **einzeln** eingeben, nicht alle auf einmal einfügen:
@@ -56,24 +58,24 @@ Terminal läuft auch direkt auf dem Handy in [Termux](https://termux.dev). Alles
    cd SMVUT
    bash scripts/termux-setup.sh
    ```
-   Das Skript installiert `python`, `python-cryptography` (fertig gebaut) und Terminal, legt `~/.terminal/.env` an und fragt nach dem Zugriff auf den Handy-Speicher (`termux-setup-storage` – bitte erlauben).
+   Das Skript installiert `python`, `python-cryptography` (fertig gebaut) und SMVUT, legt `~/.terminal/.env` an und fragt nach dem Zugriff auf den Handy-Speicher (`termux-setup-storage` – bitte erlauben).
 3. **Zugangsdaten eintragen:** `nano ~/.terminal/.env` (Speichern: Strg+O, Enter; Beenden: Strg+X).
    Die Google-Datei `client_secret.json` aus den Downloads übernehmen:
    ```bash
    cp ~/storage/downloads/client_secret*.json ~/.terminal/client_secret.json
    ```
-4. **Anmelden:** `terminal auth youtube` bzw. `terminal auth tiktok` öffnen den Login im Android-Browser. Nach „Login erfolgreich“ zurück zu Termux wechseln – das Programm hat den Login dann schon übernommen. Instagram: `terminal auth instagram --token …`.
+4. **Anmelden:** `smvut auth youtube` bzw. `smvut auth tiktok` öffnen den Login im Android-Browser. Nach „Login erfolgreich“ zurück zu Termux wechseln – das Programm hat den Login dann schon übernommen. Instagram: `smvut auth instagram --token …`.
 5. **Hochladen** – Handy-Videos liegen unter `~/storage/dcim/Camera`, Downloads unter `~/storage/downloads`:
    ```bash
    cd ~/storage/dcim/Camera
    cp ~/SMVUT/examples/clip.yaml mein-video.yaml   # dann mit nano anpassen
-   terminal post mein-video.mp4
+   smvut post mein-video.mp4
    ```
 
 Tipps für Termux:
 - Bei großen Videos vorher `termux-wake-lock` ausführen (und für Termux in den Android-Einstellungen die Akku-Optimierung abschalten), damit Android den Upload nicht anhält. Danach `termux-wake-unlock`.
 - Android hat keinen Schlüsselbund: Tokens liegen deshalb in `~/.terminal/tokens.json` (nur für Termux lesbar, Modus 600). Diese Datei nie weitergeben.
-- Aktualisieren: `cd ~/SMVUT && git pull` – fertig (die Installation verweist direkt auf den Ordner).
+- Aktualisieren: `cd ~/SMVUT && git pull` – fertig (die Installation verweist direkt auf den Ordner). Nur wenn sich Abhängigkeiten oder Befehle ändern, einmal `pip install -e .` hinterher (z. B. für den neuen Befehl `smvut`).
 - `pip install --upgrade pip` in Termux nicht ausführen, das beschädigt Termux’ Python-Paket.
 
 ## Schnellstart (Windows, Mac, Linux)
@@ -83,16 +85,16 @@ Tipps für Termux:
 uv sync
 cp .env.example .env          # oder ~/.terminal/.env – Client-IDs, Secrets, Bucket eintragen
 
-uv run terminal auth youtube              # Browser-Login bei Google
-uv run terminal auth instagram --token …  # Token aus dem Meta-App-Dashboard
-uv run terminal auth tiktok               # Browser-Login bei TikTok (PKCE)
-uv run terminal auth --check              # Status aller Anmeldungen
+uv run smvut auth youtube              # Browser-Login bei Google
+uv run smvut auth instagram --token …  # Token aus dem Meta-App-Dashboard
+uv run smvut auth tiktok               # Browser-Login bei TikTok (PKCE)
+uv run smvut auth --check              # Status aller Anmeldungen
 
-uv run terminal check clip-017.mp4        # nur prüfen
-uv run terminal post clip-017.mp4 --dry-run
-uv run terminal post clip-017.mp4         # alle Plattformen aus der YAML
-uv run terminal post clip-017.mp4 --only youtube,tiktok
-uv run terminal history                   # letzte Uploads mit Links
+uv run smvut check clip-017.mp4        # nur prüfen
+uv run smvut post clip-017.mp4 --dry-run
+uv run smvut post clip-017.mp4         # alle Plattformen aus der YAML
+uv run smvut post clip-017.mp4 --only youtube,tiktok
+uv run smvut history                   # letzte Uploads mit Links
 ```
 
 ## Metadaten: YAML neben dem Video
@@ -121,7 +123,7 @@ platforms:
 
 Tippfehler in Feldnamen brechen sofort mit Zeilenangabe ab. Eine Vorlage liegt in [`examples/clip.yaml`](examples/clip.yaml).
 
-## Was geprüft wird (`terminal check`)
+## Was geprüft wird (`smvut check`)
 
 **Blockierend:** Codec nicht H.264/HEVC · Bildrate außerhalb 23–60 fps · Dauer/Größe über dem Plattform-Limit ·
 YouTube-Titel > 100 Zeichen oder mit `<`/`>` · YouTube-Beschreibung > 5.000 Bytes · Tags > 500 Zeichen ·
@@ -131,14 +133,14 @@ Instagram-Caption > 2.200 Zeichen, > 30 Hashtags, > 20 @-Erwähnungen · Instagr
 **Warnungen:** nicht 9:16 · YouTube Querformat oder > 3 min (wird normales Video statt Short) · Instagram-Audio nicht AAC ·
 Anmeldung läuft in weniger als 7 Tagen ab.
 
-Videos (MP4/MOV) liest Terminal selbst, ohne ffmpeg (`src/terminal/mp4.py`). Vor dem Instagram-Upload wird automatisch verlustfrei „faststart“ umsortiert (Kopie in `~/.terminal/cache/`, das Original bleibt unangetastet). Neu encodiert wird nie automatisch.
+Videos (MP4/MOV) liest SMVUT selbst, ohne ffmpeg (`src/terminal/mp4.py`). Vor dem Instagram-Upload wird automatisch verlustfrei „faststart“ umsortiert (Kopie in `~/.terminal/cache/`, das Original bleibt unangetastet). Neu encodiert wird nie automatisch.
 
 ## Robustheit
 
 - Plattformen laufen **nacheinander und unabhängig**: scheitert TikTok, wird YouTube trotzdem fertig. Exit-Code 1, wenn eine Plattform scheitert.
 - **Upload-Historie** in `~/.terminal/history.db` (SHA-256 der Datei je Plattform). Ein zweiter `post` lädt nichts doppelt hoch (außer mit `--force`) und **setzt abgebrochene Läufe fort** – die Instagram-Container-ID wird vor `media_publish` gesichert, ein laufender TikTok-Entwurf wird weiter abgefragt.
 - **Wiederholungen** nur für vorübergehende Fehler (Netzwerk, 429, 5xx) und nur für sichere Schritte: bis 5 Versuche, 2/4/8 … max. 60 s. Tageslimits und endgültige Fehler werden nicht wiederholt.
-- **Tokens** im Schlüsselbund (keyring); auf Termux in `~/.terminal/tokens.json` mit Modus 600 (Ordner `~/.terminal` ist nur für dich lesbar). Instagram wird nach 24 h automatisch verlängert, TikTok eine Stunde vor Ablauf, YouTube über die Google-Bibliothek. Bei HTTP 401 einmal erneuern, danach klare Meldung („Bitte `terminal auth tiktok` ausführen“).
+- **Tokens** im Schlüsselbund (keyring); auf Termux in `~/.terminal/tokens.json` mit Modus 600 (Ordner `~/.terminal` ist nur für dich lesbar). Instagram wird nach 24 h automatisch verlängert, TikTok eine Stunde vor Ablauf, YouTube über die Google-Bibliothek. Bei HTTP 401 einmal erneuern, danach klare Meldung („Bitte `smvut auth tiktok` ausführen“).
 - **Log** `~/.terminal/terminal.log` enthält nur eigene Meldungen – keine Header, keine Request-Inhalte; Tokens werden zusätzlich herausgefiltert.
 
 ## Setup (einmalig in den Entwicklerportalen)
@@ -155,7 +157,7 @@ Videos (MP4/MOV) liest Terminal selbst, ohne ffmpeg (`src/terminal/mp4.py`). Vor
 2. Auf developers.facebook.com eine App anlegen, Produkt Instagram mit „API-Setup mit Instagram-Login“.
 3. Dein Konto unter App-Rollen als Instagram-Tester eintragen und die Einladung in der App annehmen.
 4. Berechtigungen `instagram_business_basic` und `instagram_business_content_publish`.
-5. Im API-Setup einen Token erzeugen → `terminal auth instagram --token <TOKEN>`.
+5. Im API-Setup einen Token erzeugen → `smvut auth instagram --token <TOKEN>`.
 
 **Bucket für Instagram (Cloudflare R2 oder AWS S3)**
 1. Privaten Bucket anlegen, API-Token mit Lese-/Schreibrecht nur für diesen Bucket.

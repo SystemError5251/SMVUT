@@ -1,5 +1,5 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# Einrichtung von Terminal in Termux (Android).
+# Einrichtung von SMVUT (Social Media Upload Tool) in Termux (Android).
 # Aufruf aus dem Projektordner:  bash scripts/termux-setup.sh
 set -euo pipefail
 
@@ -16,10 +16,10 @@ echo "==> Pakete installieren (python, python-cryptography, git)"
 pkg upgrade -y
 # python-cryptography kommt fertig gebaut aus Termux (google-auth braucht es;
 # per pip müsste es mit Rust kompiliert werden)
-# ffmpeg wird nicht gebraucht: Videos liest Terminal selbst (src/terminal/mp4.py)
+# ffmpeg wird nicht gebraucht: Videos liest SMVUT selbst (src/terminal/mp4.py)
 pkg install -y python python-cryptography git
 
-echo "==> Terminal installieren (reines Python, kein Kompilieren nötig)"
+echo "==> SMVUT installieren (reines Python, kein Kompilieren nötig)"
 # Hinweis: pip in Termux nie mit 'pip install --upgrade pip' aktualisieren
 pip install -e .
 
@@ -42,5 +42,5 @@ fi
 echo
 echo "Fertig. Nächste Schritte:"
 echo "  nano ~/.terminal/.env              # Zugangsdaten eintragen"
-echo "  terminal auth --check"
-echo "  terminal check ~/storage/dcim/Camera/video.mp4"
+echo "  smvut auth --check"
+echo "  smvut check ~/storage/dcim/Camera/video.mp4"

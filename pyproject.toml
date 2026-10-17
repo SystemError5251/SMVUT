@@ -17,7 +17,8 @@ dependencies = [
 ]
 
 [project.scripts]
-terminal = "terminal.cli:app"
+smvut = "terminal.cli:app"
+terminal = "terminal.cli:app"  # alter Name, funktioniert weiter
 
 [dependency-groups]
 dev = [
@@ -60,7 +61,7 @@ pythonpath = ["src"]
 
 # --- Android-App (BeeWare Briefcase): briefcase build android ---------------
 [tool.briefcase]
-project_name = "Terminal"
+project_name = "SMVUT"
 bundle = "io.github.systemerror5251"
 version = "0.1.0"
 url = "https://github.com/SystemError5251/SMVUT"
@@ -69,7 +70,7 @@ author = "SystemError5251"
 license = "LicenseRef-Proprietary"
 
 [tool.briefcase.app.terminal_app]
-formal_name = "Terminal"
+formal_name = "SMVUT"
 description = "Videos als YouTube Short, Instagram Reel und TikTok-Entwurf hochladen"
 long_description = """Lädt Hochformat-Videos über die offiziellen APIs hoch.
 Gleiche Logik wie die Kommandozeile `terminal` (Paket src/terminal)."""

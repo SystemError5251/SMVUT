@@ -1,8 +1,12 @@
-# Terminal
+# SMVUT – Social Media Upload Tool
 
 CLI, das fertige Hochformat-Videos über die offiziellen APIs als
 Instagram Reel und YouTube Short hochlädt und als TikTok-Entwurf
 in den Posteingang legt. Konzept (aus dem Projekt „WhatIf“): docs/konzept.md
+
+Name: SMVUT – Social Media Upload Tool (App, Repo, Webseite). Intern heißen Paket und
+Datenordner weiter `terminal` / `~/.terminal`, die Android-App-ID `…terminal_app` – nicht
+ändern, sonst gehen Logins verloren bzw. die App ließe sich nicht mehr updaten.
 
 ## Stack
 - Python 3.12+, uv, Typer (CLI), httpx, google-auth-oauthlib, PyYAML, tenacity,

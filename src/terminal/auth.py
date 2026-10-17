@@ -152,7 +152,7 @@ def youtube_login(store: TokenStore) -> str:
                                       authorization_prompt_message="Browser öffnet sich für "
                                                                    "den Google-Login: {url}",
                                       success_message="Login erfolgreich – du kannst zurück "
-                                                      "zu Terminal wechseln.")
+                                                      "zu SMVUT wechseln.")
     except WSGITimeoutError as exc:
         raise TerminalError("Kein Google-Login innerhalb von 5 Minuten – bitte erneut "
                             "versuchen") from exc
@@ -294,8 +294,8 @@ class _CallbackHandler(http.server.BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.end_headers()
-        text = ("Login erfolgreich – du kannst zurück zu Terminal wechseln." if ok
-                else "Login fehlgeschlagen – Details stehen im Terminal.")
+        text = ("Login erfolgreich – du kannst zurück zu SMVUT wechseln." if ok
+                else "Login fehlgeschlagen – Details stehen in SMVUT.")
         self.wfile.write(f"<html><body><p>{text}</p></body></html>".encode())
 
     def log_message(self, format: str, *args: Any) -> None:  # keine Query-Strings loggen
@@ -367,7 +367,7 @@ def tiktok_token(store: TokenStore, client: httpx.Client, force_refresh: bool = 
     return str(_store_tiktok(store, body, old=data)["access_token"])
 
 
-# --- Übersicht für `terminal auth --check` ---------------------------------
+# --- Übersicht für `smvut auth --check` ---------------------------------
 def token_overview(store: TokenStore) -> list[TokenInfo]:
     infos: list[TokenInfo] = []
     yt = store.load("youtube")

@@ -70,7 +70,7 @@ class InstagramUploader:
         issues = []
         if not self.store.load("instagram"):
             issues.append(Issue("error", self.name,
-                                "Nicht angemeldet – `terminal auth instagram --token …`"))
+                                "Nicht angemeldet – `smvut auth instagram --token …`"))
         missing = [n for n in ("S3_BUCKET", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY")
                    if not config.env(n)]
         if missing:
@@ -156,7 +156,7 @@ class InstagramUploader:
         status_code = state.get("status_code")
         if status_code not in DONE_STATES:
             # Meta lädt noch: Datei liegen lassen, der Container bleibt 24 h gültig
-            raise UploadTimeout("Instagram verarbeitet noch – `terminal post` später erneut "
+            raise UploadTimeout("Instagram verarbeitet noch – `smvut post` später erneut "
                                 "ausführen, dann wird fortgesetzt")
 
         if bucket_key:

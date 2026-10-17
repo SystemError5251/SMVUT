@@ -59,7 +59,7 @@ def test_instagram_login_invalid(store: TokenStore) -> None:
 def test_tiktok_token_expired_refresh(store: TokenStore) -> None:
     store.save("tiktok", {"access_token": "a", "expires_at": 0, "refresh_token": "r",
                           "refresh_expires_at": time.time() - 1})
-    with httpx.Client() as client, pytest.raises(AuthRequired, match="terminal auth tiktok"):
+    with httpx.Client() as client, pytest.raises(AuthRequired, match="smvut auth tiktok"):
         tiktok_token(store, client)
 
 

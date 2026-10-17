@@ -1,4 +1,4 @@
-"""Kommandozeile: terminal check | post | auth | history."""
+"""Kommandozeile: smvut check | post | auth | history (auch als `terminal`)."""
 
 from __future__ import annotations
 
@@ -37,7 +37,8 @@ from terminal.platforms.base import UploadResult
 from terminal.validate import Issue, VideoInfo, check_all
 
 app = typer.Typer(
-    help="Terminal – Hochformat-Videos als Instagram Reel, YouTube Short und "
+    help="SMVUT (Social Media Upload Tool) – Hochformat-Videos als Instagram Reel, "
+         "YouTube Short und "
          "TikTok-Entwurf hochladen (nur offizielle APIs).",
     no_args_is_help=True,
     add_completion=False,
@@ -272,4 +273,4 @@ def show_history(
 @app.command()
 def version() -> None:
     """Version anzeigen."""
-    console.print(f"terminal {__version__}")
+    console.print(f"SMVUT {__version__}")

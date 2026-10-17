@@ -1,1 +1,1 @@
-"""Android-App (BeeWare/Toga) für Terminal."""
+"""Android-App (BeeWare/Toga) für SMVUT (Social Media Upload Tool)."""

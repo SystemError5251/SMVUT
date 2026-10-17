@@ -2,7 +2,7 @@
 # Prüft die APK in einem laufenden Android-Emulator (GitHub Actions, siehe
 # .github/workflows/android.yml): installieren, Selbsttest, Oberfläche, Screenshots.
 #
-#   bash scripts/android-smoke-test.sh dist-apk/Terminal-0.1.0.apk
+#   bash scripts/android-smoke-test.sh dist-apk/SMVUT-0.1.0.apk
 set -euo pipefail
 
 APK="$1"
