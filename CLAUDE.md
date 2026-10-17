@@ -11,6 +11,10 @@ in den Posteingang legt. Konzept (aus dem Projekt „WhatIf“): docs/konzept.md
   YouTube-Resumable-Upload und S3-Signatur (SigV4) sind direkt mit httpx umgesetzt;
   ohne ffmpeg: MP4 lesen/faststart in src/terminal/mp4.py
 - Android-App: BeeWare Toga + Briefcase (src/terminal_app), Build: scripts/build-apk.sh
+  (Python 3.13, briefcase==0.4.6). CI .github/workflows/android.yml baut, testet im
+  Emulator (scripts/android-smoke-test.sh + In-App-Selbsttest) und aktualisiert das
+  Release „android-latest“. Signatur: android/debug.keystore (nie austauschen, sonst
+  lassen sich Updates nicht mehr drüberinstallieren)
 - Muss auf Android/Termux laufen: nur reine Python-Abhängigkeiten (kein pydantic,
   nichts, was Rust/C braucht; cryptography kommt dort aus `pkg`).
   Test in echtem Termux: Docker-Image termux/termux-docker
