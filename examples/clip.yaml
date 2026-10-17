@@ -1,0 +1,17 @@
+# Vorlage – gleichnamig neben das Video legen (clip.mp4 → clip.yaml)
+title: "Drei Fakten über Oktopusse"
+description: |
+  Warum Oktopusse drei Herzen haben – in 50 Sekunden.
+hashtags: [wissenschaft, tiere, fakten]
+ai_generated: false
+platforms:
+  instagram:
+    share_to_feed: true
+    caption: null
+  youtube:
+    privacy: private         # für den ersten Test; danach public
+    category_id: "27"
+    made_for_kids: false
+    publish_at: null
+  tiktok:
+    caption: null

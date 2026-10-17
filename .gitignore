@@ -1,0 +1,12 @@
+.env
+client_secret*.json
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+*.egg-info/
+*.mp4
+*.mov
