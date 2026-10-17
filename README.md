@@ -15,7 +15,7 @@ Das ausführliche Konzept (Limits, Entscheidungen, Risiken, Quellen) steht in [`
 
 Die einfachste Variante fürs Handy – ohne Termux, mit Oberfläche.
 
-1. **Herunterladen:** Im Browser (bei GitHub angemeldet) oder in der GitHub-App das Release
+1. **Herunterladen:** Im Handy-Browser das Release
    [`android-latest`](https://github.com/SystemError5251/SMVUT/releases/tag/android-latest) öffnen
    und **Terminal-0.1.0.apk** antippen. Jede neue Version entsteht automatisch (GitHub Actions baut sie
    und testet sie vorher in einem Android-Emulator).

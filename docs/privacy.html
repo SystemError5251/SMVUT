@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Terminal – Datenschutz / Privacy Policy</title>
+  <link rel="icon" href="icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <header><img src="icon.png" alt=""><a href="./">Terminal</a></header>
+  <nav>
+    <a href="./">Start</a>
+    <a href="terms.html">Nutzungsbedingungen / Terms</a>
+  </nav>
+
+  <h1>Datenschutzerklärung</h1>
+  <p class="muted">Stand: 17. Oktober 2026</p>
+
+  <h2>Worum es geht</h2>
+  <p>Terminal ist ein privates Werkzeug, mit dem der Entwickler eigene Videos auf seine eigenen
+    Konten bei YouTube, Instagram und TikTok hochlädt. Terminal läuft ausschließlich auf dem
+    Gerät des Nutzers (Android-App oder Kommandozeile). Es gibt keinen Terminal-Server.</p>
+
+  <h2>Welche Daten verarbeitet werden</h2>
+  <ul>
+    <li><strong>Zugangsdaten der Plattformen</strong> (OAuth-Tokens): werden nur lokal auf dem
+      Gerät gespeichert (Android: privater App-Speicher; Computer: Schlüsselbund des
+      Betriebssystems) und nur an die jeweilige Plattform gesendet.</li>
+    <li><strong>Videos, Titel, Beschreibungen, Hashtags</strong>: werden direkt an die gewählte
+      Plattform übertragen. Für Instagram liegt das Video kurz in einem privaten Speicher-Bucket
+      des Nutzers (Cloudflare R2 oder AWS S3), bis Instagram es abgeholt hat, und wird danach
+      gelöscht – spätestens nach einem Tag.</li>
+    <li><strong>TikTok</strong>: Terminal nutzt die Berechtigungen <code>user.info.basic</code>
+      (Konto-Kennung für die Anmeldung) und <code>video.upload</code> (Video als Entwurf in den
+      Posteingang legen). Es werden keine Profil-, Follower- oder Nutzungsdaten gelesen.</li>
+    <li><strong>Upload-Verlauf</strong>: Datum, Plattform, Status und Link jedes Uploads werden
+      lokal auf dem Gerät gespeichert.</li>
+  </ul>
+
+  <h2>Was nicht passiert</h2>
+  <p>Keine Analyse- oder Werbedienste, kein Tracking, keine Weitergabe oder kein Verkauf von
+    Daten an Dritte. Daten gehen nur an die Plattformen, auf die der Nutzer selbst hochlädt.</p>
+
+  <h2>Löschen und Widerruf</h2>
+  <p>Alle lokalen Daten werden mit dem Deinstallieren der App bzw. dem Löschen des Ordners
+    <code>~/.terminal</code> entfernt. Den Zugriff kann man jederzeit in den
+    Kontoeinstellungen von Google, Instagram und TikTok widerrufen.</p>
+
+  <h2>Kontakt</h2>
+  <p>Über GitHub: <a href="https://github.com/SystemError5251">github.com/SystemError5251</a></p>
+
+  <hr>
+
+  <h1 lang="en">Privacy Policy</h1>
+  <p class="muted" lang="en">Last updated: October 17, 2026</p>
+  <div lang="en">
+    <h2>Overview</h2>
+    <p>Terminal is a personal tool its developer uses to upload their own videos to their own
+      YouTube, Instagram and TikTok accounts. Terminal runs only on the user's device (Android
+      app or command line). There is no Terminal server.</p>
+
+    <h2>Data processed</h2>
+    <ul>
+      <li><strong>Platform credentials</strong> (OAuth tokens) are stored only on the device
+        (Android: private app storage; computers: the operating system keyring) and are sent
+        only to the respective platform.</li>
+      <li><strong>Videos, titles, descriptions, hashtags</strong> are sent directly to the chosen
+        platform. For Instagram, the video is briefly stored in the user's own private storage
+        bucket (Cloudflare R2 or AWS S3) until Instagram has fetched it, and deleted afterwards –
+        within one day at the latest.</li>
+      <li><strong>TikTok</strong>: Terminal uses the scopes <code>user.info.basic</code> (account
+        identifier for login) and <code>video.upload</code> (send a video as a draft to the
+        inbox). No profile, follower or usage data is read.</li>
+      <li><strong>Upload history</strong>: date, platform, status and link of each upload are
+        stored locally on the device.</li>
+    </ul>
+
+    <h2>What does not happen</h2>
+    <p>No analytics or advertising services, no tracking, no sharing or selling of data to
+      third parties. Data is sent only to the platforms the user uploads to.</p>
+
+    <h2>Deletion and revocation</h2>
+    <p>All local data is removed by uninstalling the app or deleting the folder
+      <code>~/.terminal</code>. Access can be revoked at any time in the Google, Instagram and
+      TikTok account settings.</p>
+
+    <h2>Contact</h2>
+    <p>Via GitHub: <a href="https://github.com/SystemError5251">github.com/SystemError5251</a></p>
+  </div>
+</main>
+</body>
+</html>
