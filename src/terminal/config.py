@@ -8,7 +8,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from dotenv import load_dotenv
+from dotenv import dotenv_values, load_dotenv, set_key, unset_key
 
 APP_NAME = "terminal"
 PLATFORMS = ("youtube", "instagram", "tiktok")
@@ -19,6 +19,7 @@ INSTAGRAM_GRAPH = f"https://graph.instagram.com/{INSTAGRAM_API_VERSION}"
 INSTAGRAM_TOKEN_BASE = "https://graph.instagram.com"  # Token-Tausch ohne Version
 
 YOUTUBE_SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
+YOUTUBE_UPLOAD_URL = "https://www.googleapis.com/upload/youtube/v3/videos"
 
 TIKTOK_AUTHORIZE_URL = "https://www.tiktok.com/v2/auth/authorize/"
 TIKTOK_API = "https://open.tiktokapis.com/v2"
@@ -98,16 +99,20 @@ def token_file() -> Path:
 
 # --- Android / Termux ------------------------------------------------------
 def is_termux() -> bool:
-    return (sys.platform == "android" or "TERMUX_VERSION" in os.environ
-            or "com.termux" in os.environ.get("PREFIX", ""))
+    return "TERMUX_VERSION" in os.environ or "com.termux" in os.environ.get("PREFIX", "")
+
+
+def is_android() -> bool:
+    """Termux oder die Android-App (APK)."""
+    return sys.platform == "android" or is_termux()
 
 
 def token_backend() -> str:
-    """keyring auf Desktop-Systemen, Datei auf Termux (Android hat keinen Schlüsselbund)."""
+    """keyring auf Desktop-Systemen, Datei auf Android (dort gibt es keinen Schlüsselbund)."""
     choice = os.environ.get("TERMINAL_TOKEN_STORE", "").strip().lower()
     if choice in ("keyring", "file"):
         return choice
-    return "file" if is_termux() else "keyring"
+    return "file" if is_android() else "keyring"
 
 
 def setup_browser() -> None:
@@ -116,10 +121,37 @@ def setup_browser() -> None:
         os.environ["BROWSER"] = "termux-open-url"
 
 
+def env_file() -> Path:
+    return home() / ".env"
+
+
 def load_env() -> None:
     """Liest .env aus dem aktuellen Ordner und aus ~/.terminal/.env."""
     load_dotenv(Path.cwd() / ".env")
-    load_dotenv(home() / ".env")
+    load_dotenv(env_file())
+
+
+def read_env_file() -> dict[str, str]:
+    path = env_file()
+    if not path.exists():
+        return {}
+    return {k: v for k, v in dotenv_values(path).items() if v is not None}
+
+
+def write_env_file(values: dict[str, str]) -> None:
+    """Speichert Einstellungen in ~/.terminal/.env (Modus 600) und übernimmt sie sofort."""
+    path = env_file()
+    if not path.exists():
+        os.close(os.open(path, os.O_WRONLY | os.O_CREAT, 0o600))
+    path.chmod(0o600)
+    for key, value in values.items():
+        value = value.strip()
+        if value:
+            set_key(path, key, value, quote_mode="always")
+            os.environ[key] = value
+        else:
+            unset_key(path, key, quote_mode="always")
+            os.environ.pop(key, None)
 
 
 def env(name: str, default: str | None = None) -> str | None:

@@ -11,7 +11,7 @@ from fractions import Fraction
 from pathlib import Path
 from typing import Any, Literal
 
-from terminal import config
+from terminal import config, mp4
 from terminal.errors import ConfigError, UploadError
 from terminal.meta import PostMeta
 
@@ -76,7 +76,14 @@ def _rotation(stream: dict[str, Any]) -> int:
 
 
 def video_info(path: Path, data: dict[str, Any] | None = None) -> VideoInfo:
-    data = data if data is not None else probe(path)
+    """MP4/MOV liest mp4.py ohne ffmpeg; andere Formate nur, wenn ffprobe installiert ist."""
+    if data is None:
+        try:
+            return _mp4_info(path)
+        except mp4.Mp4Error:
+            if not shutil.which("ffprobe"):
+                raise UploadError(f"{path.name}: kein lesbares MP4/MOV") from None
+        data = probe(path)
     streams = data.get("streams", [])
     video = next((s for s in streams if s.get("codec_type") == "video"), None)
     if video is None:
@@ -229,18 +236,39 @@ def check_all(video: Path, meta: PostMeta, platforms: list[str],
     return info, check_video(video, info, platforms) + check_texts(meta, platforms)
 
 
+def _mp4_info(path: Path) -> VideoInfo:
+    info = mp4.probe(path)
+    video = info.video
+    if video is None:
+        raise UploadError(f"{path.name} enthält keine Videospur")
+    width, height = round(video.width), round(video.height)
+    if video.rotation % 180 == 90:
+        width, height = height, width
+    seconds = video.seconds or info.duration
+    return VideoInfo(
+        codec=video.codec,
+        width=width,
+        height=height,
+        fps=round(video.samples / seconds, 3) if seconds else 0.0,
+        duration=info.duration,
+        size=info.size,
+        bitrate=round(video.payload * 8 / seconds) if seconds else None,
+        audio_codec=info.audio.codec if info.audio else None,
+    )
+
+
 def faststart_copy(video: Path, sha256: str) -> Path:
-    """Verlustfreier Remux, damit das moov-Atom vorne steht. Das Original bleibt unangetastet."""
-    target = config.cache_dir() / f"{sha256[:16]}-faststart.mp4"
-    if target.exists() and target.stat().st_size > 0:
-        return target
-    tmp = target.with_suffix(".part.mp4")
-    result = subprocess.run(
-        [_require("ffmpeg"), "-y", "-v", "error", "-i", str(video), "-map", "0:v:0", "-map", "0:a?",
-         "-c", "copy", "-movflags", "+faststart", str(tmp)],
-        capture_output=True, text=True, check=False)
-    if result.returncode != 0:
-        tmp.unlink(missing_ok=True)
-        raise UploadError(f"faststart-Remux fehlgeschlagen: {result.stderr.strip()}")
+    """Verlustfrei umsortieren, damit das moov-Atom vorne steht. Das Original bleibt
+    unangetastet; steht moov schon vorne, wird das Original direkt verwendet."""
+    try:
+        if not mp4.needs_faststart(video):
+            return video
+        target = config.cache_dir() / f"{sha256[:16]}-faststart{video.suffix.lower()}"
+        if target.exists() and target.stat().st_size == video.stat().st_size:
+            return target
+        tmp = target.with_name(target.name + ".part")
+        mp4.faststart(video, tmp)
+    except mp4.Mp4Error as exc:
+        raise UploadError(f"faststart nicht möglich: {exc}") from exc
     tmp.replace(target)
     return target

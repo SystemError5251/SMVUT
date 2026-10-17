@@ -139,18 +139,23 @@ def _json(response: httpx.Response) -> dict[str, Any]:
 
 # --- YouTube ---------------------------------------------------------------
 def youtube_login(store: TokenStore) -> str:
-    from google_auth_oauthlib.flow import InstalledAppFlow
+    from google_auth_oauthlib.flow import InstalledAppFlow, WSGITimeoutError
 
     path = config.find_file(config.require_env("YOUTUBE_CLIENT_SECRETS"))
     try:
         flow = InstalledAppFlow.from_client_secrets_file(path, config.YOUTUBE_SCOPES)
     except FileNotFoundError as exc:
         raise ConfigError(f"OAuth-Client-Datei nicht gefunden: {path}") from exc
-    creds = flow.run_local_server(port=0, prompt="consent", access_type="offline",
-                                  authorization_prompt_message="Browser öffnet sich für den "
-                                                               "Google-Login: {url}",
-                                  success_message="Login erfolgreich – du kannst das "
-                                                  "Fenster schließen.")
+    try:
+        creds = flow.run_local_server(port=0, prompt="consent", access_type="offline",
+                                      timeout_seconds=300,
+                                      authorization_prompt_message="Browser öffnet sich für "
+                                                                   "den Google-Login: {url}",
+                                      success_message="Login erfolgreich – du kannst zurück "
+                                                      "zu Terminal wechseln.")
+    except WSGITimeoutError as exc:
+        raise TerminalError("Kein Google-Login innerhalb von 5 Minuten – bitte erneut "
+                            "versuchen") from exc
     store.save("youtube", json.loads(creds.to_json()))
     return "YouTube-Login gespeichert"
 
@@ -289,7 +294,7 @@ class _CallbackHandler(http.server.BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.end_headers()
-        text = ("Login erfolgreich – du kannst das Fenster schließen." if ok
+        text = ("Login erfolgreich – du kannst zurück zu Terminal wechseln." if ok
                 else "Login fehlgeschlagen – Details stehen im Terminal.")
         self.wfile.write(f"<html><body><p>{text}</p></body></html>".encode())
 

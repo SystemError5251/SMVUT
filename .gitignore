@@ -9,4 +9,9 @@ __pycache__/
 dist/
 *.egg-info/
 *.mp4
+!tests/data/*.mp4
+!src/terminal_app/resources/*.mp4
 *.mov
+build/
+logs/
+dist-apk/

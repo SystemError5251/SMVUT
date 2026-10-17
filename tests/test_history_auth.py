@@ -143,3 +143,22 @@ def test_termux_browser(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_home_is_private() -> None:
     assert stat.S_IMODE(config.home().stat().st_mode) == 0o700
+
+
+def test_android_app_uses_file_store(monkeypatch: pytest.MonkeyPatch) -> None:
+    for name in ("TERMUX_VERSION", "PREFIX", "TERMINAL_TOKEN_STORE"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setattr(config.sys, "platform", "android")  # APK: kein Termux
+    assert config.is_android() and not config.is_termux()
+    assert config.token_backend() == "file"
+
+
+def test_env_file_roundtrip(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("S3_BUCKET", raising=False)
+    config.write_env_file({"S3_BUCKET": "videos", "TIKTOK_CLIENT_KEY": "a'b\"c"})
+    assert stat.S_IMODE(config.env_file().stat().st_mode) == 0o600
+    assert config.read_env_file() == {"S3_BUCKET": "videos", "TIKTOK_CLIENT_KEY": "a'b\"c"}
+    assert config.env("S3_BUCKET") == "videos"
+    config.write_env_file({"S3_BUCKET": ""})
+    assert "S3_BUCKET" not in config.read_env_file()
+    monkeypatch.delenv("TIKTOK_CLIENT_KEY", raising=False)

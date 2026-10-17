@@ -47,7 +47,6 @@ def fake_platforms(monkeypatch: pytest.MonkeyPatch) -> None:
         return FakeUploader(name)
 
     monkeypatch.setattr(platforms, "create", create)
-    monkeypatch.setattr(cli.platforms, "create", create)
     monkeypatch.setattr(cli, "console", Console(width=200))
 
 

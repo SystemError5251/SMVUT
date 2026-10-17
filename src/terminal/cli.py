@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated
 
 import httpx
 import typer
@@ -15,13 +15,14 @@ from rich.progress import (
     BarColumn,
     DownloadColumn,
     Progress,
+    TaskID,
     TextColumn,
     TimeRemainingColumn,
     TransferSpeedColumn,
 )
 from rich.table import Table
 
-from terminal import __version__, config, platforms
+from terminal import __version__, config, service
 from terminal.auth import (
     TokenStore,
     instagram_login,
@@ -29,10 +30,10 @@ from terminal.auth import (
     token_overview,
     youtube_login,
 )
-from terminal.errors import AuthRequired, QuotaExceeded, TerminalError, UploadTimeout, redact
-from terminal.history import FAILED, STATUS_LABELS, Entry, History, file_sha256
+from terminal.errors import TerminalError, redact
+from terminal.history import FAILED, STATUS_LABELS, History, file_sha256
 from terminal.meta import PostMeta, load_meta, meta_path_for
-from terminal.platforms.base import UploadContext, Uploader, UploadResult
+from terminal.platforms.base import UploadResult
 from terminal.validate import Issue, VideoInfo, check_all
 
 app = typer.Typer(
@@ -48,13 +49,7 @@ log = logging.getLogger(config.APP_NAME)
 def _setup() -> None:
     config.load_env()
     config.setup_browser()
-    if not log.handlers:
-        # Nur eigene Fehlermeldungen ins Log: keine Header, keine Request-Inhalte
-        handler = logging.FileHandler(config.log_path(), encoding="utf-8")
-        handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
-        log.addHandler(handler)
-        log.setLevel(logging.INFO)
-        log.propagate = False
+    service.setup_logging()
 
 
 def _fail(message: str) -> typer.Exit:
@@ -92,14 +87,12 @@ def _print_info(video: Path, info: VideoInfo) -> None:
                   f"{info.size / config.MB:.1f} MB{rate}, Audio: {info.audio_codec or 'keins'}")
 
 
-def _prepare(video: Path, only: str | None,
-             ) -> tuple[PostMeta, list[str], VideoInfo, list[Issue]]:
+def _load(video: Path, only: str | None) -> tuple[PostMeta, list[str]]:
     meta = load_meta(meta_path_for(video))
     targets = _parse_only(only, meta)
     if not targets:
         raise TerminalError("Keine Zielplattform – in der YAML unter platforms: eintragen")
-    info, issues = check_all(video, meta, targets)
-    return meta, targets, info, issues
+    return meta, targets
 
 
 # --- check -----------------------------------------------------------------
@@ -112,7 +105,8 @@ def check(
     """Video und Texte gegen die Limits der Zielplattformen prüfen."""
     _setup()
     try:
-        meta, targets, info, issues = _prepare(video, only)
+        meta, targets = _load(video, only)
+        info, issues = check_all(video, meta, targets)
     except TerminalError as exc:
         raise _fail(str(exc)) from exc
     _print_info(video, info)
@@ -138,14 +132,8 @@ def post(
     _setup()
     store = TokenStore()
     try:
-        meta, targets, info, issues = _prepare(video, only)
-        uploaders = {name: platforms.create(name, store) for name in targets}
-        for uploader in uploaders.values():
-            issues += uploader.check(video, meta, info)
-        for token in token_overview(store):
-            if token.platform in targets and token.logged_in and token.expiring_soon:
-                issues.append(Issue("warning", token.platform,
-                                    f"Anmeldung läuft bald ab: {token.detail}"))
+        meta, targets = _load(video, only)
+        info, issues, uploaders = service.preflight(video, meta, targets, store)
     except TerminalError as exc:
         raise _fail(str(exc)) from exc
 
@@ -165,68 +153,30 @@ def post(
         console.print("[green]Dry-Run: Prüfung bestanden, nichts hochgeladen.[/]")
         return
 
-    results: list[UploadResult] = []
-    failed = False
-    for name, uploader in uploaders.items():  # nacheinander, unabhängig voneinander
-        prev = history.get(sha, name)
-        if prev and prev.done and not force:
-            console.print(f"[dim]{name}: schon erledigt ({STATUS_LABELS[prev.status]}) – "
-                          "übersprungen (--force zum erneuten Hochladen)[/]")
-            results.append(UploadResult(name, prev.status, prev.remote_id, prev.link,
-                                        "aus der Historie"))
-            continue
-        if prev and force:
-            history.reset(sha, name)
-            prev = None
-        result = _run_upload(name, uploader, video, meta, sha, prev, history)
-        failed = failed or result.status == FAILED
-        results.append(result)
+    with Progress(TextColumn("[bold]{task.description:<9}[/]"), BarColumn(), DownloadColumn(),
+                  TransferSpeedColumn(), TimeRemainingColumn(), console=console) as bar:
+        tasks: dict[str, TaskID] = {}
+
+        def on_start(name: str) -> None:
+            tasks[name] = bar.add_task(name, total=video.stat().st_size)
+
+        def progress(name: str, done: int, total: int) -> None:
+            bar.update(tasks[name], completed=done, total=total)
+
+        def message(name: str, msg: str) -> None:
+            bar.console.print(f"  [dim]{escape(name)}: {escape(msg)}[/]")
+
+        results = service.post(video, meta, uploaders, history, sha, force=force,
+                               on_start=on_start, progress=progress, message=message)
 
     _print_summary(results)
     for result in results:
-        if result.platform == "tiktok" and result.note and result.note != "aus der Historie":
+        if result.platform == "tiktok" and result.note and result.note != service.FROM_HISTORY:
             console.print(Panel(result.note, title="TikTok-Caption zum Kopieren",
                                 border_style="cyan"))
     history.close()
-    if failed:
+    if any(r.status == FAILED for r in results):
         raise typer.Exit(1)
-
-
-def _run_upload(name: str, uploader: Uploader, video: Path, meta: PostMeta,
-                sha: str, prev: Entry | None, history: History) -> UploadResult:
-    def save(status: str, **kwargs: Any) -> None:
-        history.save(sha, name, str(video.resolve()), status, **kwargs)
-
-    with Progress(TextColumn(f"[bold]{name:<9}[/]"), BarColumn(), DownloadColumn(),
-                  TransferSpeedColumn(), TimeRemainingColumn(), console=console,
-                  transient=False) as bar:
-        task = bar.add_task(name, total=video.stat().st_size)
-
-        def progress(done: int, total: int) -> None:
-            bar.update(task, completed=done, total=total)
-
-        ctx = UploadContext(sha256=sha, progress=progress,
-                            previous=prev,
-                            save=save,
-                            log=lambda msg: bar.console.print(f"  [dim]{escape(msg)}[/]"))
-        try:
-            result = uploader.upload(video, meta, ctx)
-        except UploadTimeout as exc:
-            log.warning("%s: %s", name, exc)
-            return UploadResult(name, FAILED, note=str(exc))
-        except (AuthRequired, QuotaExceeded, TerminalError) as exc:
-            save(FAILED, error=str(exc))
-            log.error("%s: %s", name, exc)
-            return UploadResult(name, FAILED, note=str(exc))
-        except (httpx.HTTPError, OSError) as exc:
-            message = redact(f"{type(exc).__name__}: {exc}")
-            save(FAILED, error=message)
-            log.error("%s: %s", name, message)
-            return UploadResult(name, FAILED, note=message)
-
-    save(result.status, remote_id=result.remote_id, link=result.link)
-    log.info("%s: %s %s", name, result.status, result.remote_id)
-    return result
 
 
 def _print_summary(results: list[UploadResult]) -> None:
