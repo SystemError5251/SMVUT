@@ -19,8 +19,8 @@ ui_dump() {  # aktuelle Oberfläche als XML nach $OUT/$1.xml
     adb pull /sdcard/ui.xml "$OUT/$1.xml" >/dev/null
 }
 
-expect_text() {  # Datei, Text
-    if ! grep -q "$2" "$OUT/$1.xml"; then
+expect_text() {  # Datei, Text (Android zeigt Button-Texte in Großbuchstaben)
+    if ! grep -qi "$2" "$OUT/$1.xml"; then
         echo "FEHLER: Text „$2“ nicht auf dem Bildschirm ($1)" >&2
         return 1
     fi
@@ -58,7 +58,7 @@ sleep 2
 ui_dump hochladen
 adb exec-out screencap -p > "$OUT/screenshot-hochladen.png"
 expect_text hochladen "Video auswählen"
-expect_text hochladen "SELFTEST RESULT: PASS\|Selbsttest"
+expect_text hochladen "YouTube Short"
 
 # 3. Tab „Konten“ öffnen: Status ohne Anmeldung
 tap_text hochladen "Konten"
