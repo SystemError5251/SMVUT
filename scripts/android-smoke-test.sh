@@ -19,8 +19,10 @@ ui_dump() {  # aktuelle Oberfläche als XML nach $OUT/$1.xml
     adb pull /sdcard/ui.xml "$OUT/$1.xml" >/dev/null
 }
 
-expect_text() {  # Datei, Text (Android zeigt Button-Texte in Großbuchstaben)
-    if ! grep -qi "$2" "$OUT/$1.xml"; then
+expect_text() {  # Datei, Text – ohne Groß-/Kleinschreibung (Buttons sind in Großbuchstaben,
+                 # casefold statt grep -i, damit auch „ä“/„Ä“ unabhängig vom Locale passen)
+    if ! python3 -c 'import sys; t = open(sys.argv[1], encoding="utf-8").read().casefold()
+sys.exit(sys.argv[2].casefold() not in t)' "$OUT/$1.xml" "$2"; then
         echo "FEHLER: Text „$2“ nicht auf dem Bildschirm ($1)" >&2
         return 1
     fi
