@@ -11,7 +11,9 @@ fi
 cd "$(dirname "$0")/.."
 
 echo "==> Pakete installieren (python, python-cryptography, ffmpeg, git)"
-pkg update -y
+# Erst alle Pakete aktualisieren: Neue Pakete wie ffmpeg brauchen die aktuellen
+# Systembibliotheken, sonst "CANNOT LINK EXECUTABLE ... cannot locate symbol"
+pkg upgrade -y
 # python-cryptography kommt fertig gebaut aus Termux (google-auth braucht es;
 # per pip müsste es mit Rust kompiliert werden)
 pkg install -y python python-cryptography ffmpeg git
