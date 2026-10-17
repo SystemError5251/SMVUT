@@ -1,6 +1,6 @@
 # Terminal
 
-Ein Python-Kommandozeilenprogramm, das ein fertiges Hochformat-Video mit **einem Befehl** hochlädt:
+Lädt ein fertiges Hochformat-Video mit **einem Befehl** (oder einem Tipp in der Android-App) hoch:
 
 | Plattform | Ergebnis | Weg |
 |---|---|---|
@@ -10,6 +10,38 @@ Ein Python-Kommandozeilenprogramm, das ein fertiges Hochformat-Video mit **einem
 
 Ausschließlich offizielle APIs – keine Browser-Automatisierung, keine nachgebauten App-Schnittstellen.
 Das ausführliche Konzept (Limits, Entscheidungen, Risiken, Quellen) steht in [`docs/konzept.md`](docs/konzept.md).
+
+## Android-App (APK)
+
+Die einfachste Variante fürs Handy – ohne Termux, mit Oberfläche.
+
+1. **Herunterladen:** Im Browser (bei GitHub angemeldet) oder in der GitHub-App das Release
+   [`android-latest`](https://github.com/SystemError5251/SMVUT/releases/tag/android-latest) öffnen
+   und **Terminal-0.1.0.apk** antippen. Jede neue Version entsteht automatisch (GitHub Actions baut sie
+   und testet sie vorher in einem Android-Emulator).
+2. **Installieren:** Die heruntergeladene Datei antippen. Android fragt einmal, ob der Browser/die
+   GitHub-App Apps installieren darf → erlauben. Play Protect warnt eventuell vor einer
+   „unbekannten App“ → „Trotzdem installieren“.
+3. **Tab „Konten“:** Unten die Einstellungen eintragen (Bucket für Instagram, TikTok Client Key/Secret)
+   und speichern. Dann:
+   - YouTube: `client_secret.json` (OAuth-Client „Desktop-App“) importieren → „Bei YouTube anmelden“
+   - Instagram: Token einfügen → „Instagram-Token übernehmen“
+   - TikTok: „Bei TikTok anmelden“
+   Logins öffnen den Handy-Browser; nach „Login erfolgreich“ zurück zur App wechseln.
+4. **Tab „Hochladen“:** Video auswählen, Titel/Beschreibung/Hashtags eintragen, Plattformen wählen,
+   „Hochladen“. Während des Uploads bleibt der Bildschirm an – die App dabei im Vordergrund lassen.
+   Für TikTok danach „TikTok-Caption kopieren“ und in der TikTok-App den Entwurf öffnen.
+5. **Tab „Verlauf“:** frühere Uploads mit Links. Ein zweites „Hochladen“ desselben Videos lädt
+   nichts doppelt hoch und setzt abgebrochene Uploads fort.
+
+Updates: neue APK einfach drüber installieren – Logins und Einstellungen bleiben erhalten (alle
+Versionen sind mit demselben Schlüssel `android/debug.keystore` signiert).
+
+Selbsttest auf dem Gerät (optional, per USB/adb):
+`adb shell am start -n io.github.systemerror5251.terminal_app/org.beeware.android.MainActivity --ez selftest true`
+– das Ergebnis steht danach im Ergebnisfeld der App.
+
+APK selbst bauen: `pip install briefcase==0.4.6` (Python 3.13), dann `bash scripts/build-apk.sh`.
 
 ## Android (Termux)
 
@@ -24,7 +56,7 @@ Terminal läuft auch direkt auf dem Handy in [Termux](https://termux.dev). Alles
    cd SMVUT
    bash scripts/termux-setup.sh
    ```
-   Das Skript installiert `python`, `python-cryptography` (fertig gebaut), `ffmpeg` und Terminal, legt `~/.terminal/.env` an und fragt nach dem Zugriff auf den Handy-Speicher (`termux-setup-storage` – bitte erlauben).
+   Das Skript installiert `python`, `python-cryptography` (fertig gebaut) und Terminal, legt `~/.terminal/.env` an und fragt nach dem Zugriff auf den Handy-Speicher (`termux-setup-storage` – bitte erlauben).
 3. **Zugangsdaten eintragen:** `nano ~/.terminal/.env` (Speichern: Strg+O, Enter; Beenden: Strg+X).
    Die Google-Datei `client_secret.json` aus den Downloads übernehmen:
    ```bash
@@ -47,7 +79,7 @@ Tipps für Termux:
 ## Schnellstart (Windows, Mac, Linux)
 
 ```bash
-# Voraussetzungen: Python 3.12+, uv, ffmpeg/ffprobe
+# Voraussetzungen: Python 3.12+ und uv (ffmpeg nicht nötig)
 uv sync
 cp .env.example .env          # oder ~/.terminal/.env – Client-IDs, Secrets, Bucket eintragen
 
@@ -99,7 +131,7 @@ Instagram-Caption > 2.200 Zeichen, > 30 Hashtags, > 20 @-Erwähnungen · Instagr
 **Warnungen:** nicht 9:16 · YouTube Querformat oder > 3 min (wird normales Video statt Short) · Instagram-Audio nicht AAC ·
 Anmeldung läuft in weniger als 7 Tagen ab.
 
-Vor dem Instagram-Upload wird automatisch verlustfrei mit `+faststart` remuxt (Kopie in `~/.terminal/cache/`, das Original bleibt unangetastet). Neu encodiert wird nie automatisch.
+Videos (MP4/MOV) liest Terminal selbst, ohne ffmpeg (`src/terminal/mp4.py`). Vor dem Instagram-Upload wird automatisch verlustfrei „faststart“ umsortiert (Kopie in `~/.terminal/cache/`, das Original bleibt unangetastet). Neu encodiert wird nie automatisch.
 
 ## Robustheit
 
@@ -140,6 +172,8 @@ Vor dem Instagram-Upload wird automatisch verlustfrei mit `+faststart` remuxt (K
 
 ## Testvideo
 
+Mit ffmpeg (am PC oder `pkg install ffmpeg` in Termux):
+
 ```bash
 ffmpeg -f lavfi -i testsrc=size=1080x1920:rate=30 -f lavfi -i sine=frequency=440 \
   -t 5 -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest test.mp4
@@ -154,5 +188,10 @@ uv run ruff check
 uv run mypy src
 uv run pytest          # Tests machen nie echte Uploads (HTTP gemockt mit respx)
 ```
+
+Aufbau: `src/terminal/` enthält die gesamte Logik (CLI in `cli.py`, gemeinsamer Ablauf in
+`service.py`), `src/terminal_app/` die Android-Oberfläche. YouTube-Upload und S3-Signatur sind
+direkt mit httpx umgesetzt – ohne google-api-python-client und boto3, die die APK um ~140 MB
+vergrößern würden.
 
 Neue Plattform: eine Datei in `src/terminal/platforms/`, die das `Uploader`-Protokoll aus `platforms/base.py` erfüllt, und ein Eintrag in `platforms/__init__.py`.
