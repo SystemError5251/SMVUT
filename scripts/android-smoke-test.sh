@@ -62,10 +62,14 @@ adb exec-out screencap -p > "$OUT/screenshot-hochladen.png"
 expect_text hochladen "Video auswählen"
 expect_text hochladen "YouTube Short"
 
-# 3. Tab „Konten“ öffnen: Status ohne Anmeldung
-tap_text hochladen "Konten"
-sleep 3
-ui_dump konten
+# 3. Tab „Konten“ öffnen: Status ohne Anmeldung. Die Zwischenablage-Vorschau von Android
+#    (vom Selbsttest) liegt kurz über der Tab-Leiste – darum notfalls mehrmals tippen.
+for _ in 1 2 3; do
+    tap_text hochladen "Konten"
+    sleep 4
+    ui_dump konten
+    grep -q "nicht angemeldet" "$OUT/konten.xml" && break
+done
 adb exec-out screencap -p > "$OUT/screenshot-konten.png"
 expect_text konten "YouTube: nicht angemeldet"
 expect_text konten "client_secret.json importieren"
