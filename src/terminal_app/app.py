@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import shutil
+import textwrap
 import traceback
 from collections.abc import Callable
 from datetime import datetime
@@ -44,8 +45,14 @@ def _heading(text: str) -> toga.Label:
     return toga.Label(text, style=Pack(font_weight="bold", margin_top=12))
 
 
+def _wrap(text: str, width: int = 40) -> str:
+    """Labels brechen auf Android nicht selbst um: schmal genug fürs Handy umbrechen."""
+    return "\n".join(textwrap.fill(line, width=width, subsequent_indent="   ") or line
+                     for line in text.splitlines())
+
+
 def _hint(text: str) -> toga.Label:
-    return toga.Label(text, style=Pack(font_size=11))
+    return toga.Label(_wrap(text), style=Pack(font_size=11))
 
 
 class TerminalApp(toga.App):
@@ -139,7 +146,7 @@ class TerminalApp(toga.App):
             await self._error("Video nicht lesbar", exc)
             return
         self.video = path
-        self.video_label.text = forms.describe_video(path.name, info)
+        self.video_label.text = _wrap(forms.describe_video(path.name, info))
         if not self.title_input.value:
             self.title_input.value = path.stem.replace("_", " ")[:100]
 
@@ -209,7 +216,7 @@ class TerminalApp(toga.App):
             history.close()
 
     def _show_status(self, text: str, progress: float | None) -> None:
-        self.status.text = text
+        self.status.text = _wrap(text)
         if progress is not None:
             self.progress.value = progress
 
@@ -275,7 +282,7 @@ class TerminalApp(toga.App):
         google = config.find_file(config.env("YOUTUBE_CLIENT_SECRETS") or "client_secret.json")
         lines.append(f"{'✓' if google.exists() else '✗'} Google-OAuth-Datei "
                      f"{'vorhanden' if google.exists() else 'fehlt'}")
-        self.accounts_status.text = "\n".join(lines)
+        self.accounts_status.text = _wrap("\n".join(lines))
 
     async def on_import_google(self, widget: toga.Widget) -> None:
         try:

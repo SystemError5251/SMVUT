@@ -12,6 +12,8 @@ os.environ["TOGA_BACKEND"] = "toga_dummy"
 
 
 def test_app_builds_and_saves_settings(tmp_path: Path) -> None:
+    import toga
+
     from terminal import config
     from terminal_app.app import main
 
@@ -19,6 +21,9 @@ def test_app_builds_and_saves_settings(tmp_path: Path) -> None:
     assert [tab.text for tab in app.tabs.content] == ["Hochladen", "Konten", "Verlauf"]
     assert app.switches["youtube"].value and app.post_button.enabled
     assert "✗ YouTube: nicht angemeldet" in app.accounts_status.text
+    hints = [w.text for w in app.window.content.content[1].content.content.children
+             if isinstance(w, toga.Label)]
+    assert hints and all(len(line) <= 40 for h in hints for line in h.splitlines())
 
     app.settings["S3_BUCKET"].value = "videos"
     config.write_env_file({k: str(f.value) for k, f in app.settings.items()})
